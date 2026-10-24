@@ -375,6 +375,16 @@ const C = {
 
   // Gift Code
   REDEEM_CODE:         0x9A00,
+
+  // GM Tools
+  GM_CMD:              0x7000,
+  GM_BAN:              0x7001,
+  GM_KICK:             0x7002,
+  GM_ITEM:             0x7003,
+
+  // Hot Events
+  HOT_EVENTS:          0x7100,
+  CLAIM_EVENT:         0x7101,
 };
 
 // ═══════════════════════════════════════════
@@ -704,6 +714,17 @@ const S = {
 
   // Gift Code
   REDEEM_CODE_RSP:       0x9A10,
+
+  // GM Tools
+  GM_CMD_RSP:            0x7010,
+  SERVER_ANNOUNCE:       0x7011,
+  GM_BAN_RSP:            0x7012,
+  GM_KICK_RSP:           0x7013,
+  GM_ITEM_RSP:           0x7014,
+
+  // Hot Events
+  HOT_EVENTS:            0x7110,
+  CLAIM_EVENT_RSP:       0x7111,
 };
 
 // Reverse lookup: number → name

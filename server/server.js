@@ -75,6 +75,8 @@ const crossServer = require('./systems/cross-server');
 const tutorial = require('./systems/tutorial');
 const giftCode = require('./systems/gift-code');
 const titles = require('./systems/titles');
+const gm = require('./systems/gm');
+const hotEvents = require('./systems/hot-events');
 
 // ─── Configuration ───────────────────────
 const PORT = parseInt(process.env.PORT, 10) || 8899;
@@ -147,7 +149,9 @@ crossServer.initDB();
 tutorial.initDB();
 giftCode.initDB();
 titles.initDB();
-console.log('[DB] Database ready (60 systems).');
+gm.initDB();
+hotEvents.initDB();
+console.log('[DB] Database ready (62 systems).');
 
 // ─── Create HTTP Server ──────────────────
 const httpHandler = createHttpHandler(config);
@@ -168,6 +172,7 @@ wss.on('connection', (ws, req) => {
 
   ws.session = { ip };
   ws.buffer = Buffer.alloc(0);
+  gm.registerClient(ws);
 
   ws.on('message', (data) => {
     // Accumulate data into buffer
@@ -194,6 +199,7 @@ wss.on('connection', (ws, req) => {
 
   ws.on('close', () => {
     console.log(`[WS] Disconnected: ${ws.session?.username || ip}`);
+    gm.removeClient(ws);
     if (ws.session && ws.session.charId) {
       clients.delete(ws.session.charId);
       try {
@@ -216,7 +222,7 @@ server.listen(PORT, HOST, () => {
   console.log(`║  HTTP + WS : ${HOST}:${PORT}                    ║`);
   console.log(`║  Public    : ${PUBLIC_HOST}:${PORT}              ║`);
   console.log('║  Database  : SQLite (data/wartune.db)        ║');
-  console.log('║  58 Systems Loaded — Complete Edition        ║');
+  console.log('║  62 Systems Loaded — Complete Edition        ║');
   console.log('║  Core: Login, Chat, Battle, Inventory        ║');
   console.log('║  Social: Guild, Mail, Friends, Party, Social ║');
   console.log('║  Quest: Story, Bounty, Devotion, Circuit     ║');
@@ -232,6 +238,7 @@ server.listen(PORT, HOST, () => {
   console.log('║  Cloud Adventure, Purgatory Maze, Archaeology║');
   console.log('║  Knighthood, Tutorial, Class Advance         ║');
   console.log('║  Daily Login, Feature Unlock, Buff           ║');
+  console.log('║  GM Tools, Hot Events, Gift Codes, Titles    ║');
   console.log('╚══════════════════════════════════════════════╝');
   console.log('');
 });

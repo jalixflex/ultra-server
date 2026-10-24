@@ -72,6 +72,8 @@ const tutorial = require('./systems/tutorial');
 const featureUnlock = require('./systems/feature-unlock');
 const titles = require('./systems/titles');
 const giftCode = require('./systems/gift-code');
+const gm = require('./systems/gm');
+const hotEvents = require('./systems/hot-events');
 
 /**
  * Per-connection state stored on the ws object:
@@ -2453,6 +2455,58 @@ HANDLERS[C.CITY_SPEED_UP] = (ws, body) => {
     const req = JSON.parse(body.toString());
     const result = city.speedUpBuild(cid, req.buildingId);
     sendJson(ws, S.CITY_SPEED_UP_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── GM Tools ──────────────────────────────
+HANDLERS[C.GM_CMD] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const parts = (req.command || '').trim().split(/\s+/);
+    const cmd = parts[0] || '';
+    const args = parts.slice(1);
+    const result = gm.executeGMCommand(cid, cmd, args);
+    sendJson(ws, S.GM_CMD_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.GM_BAN] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = gm.executeGMCommand(cid, 'ban', [req.targetName, String(req.duration || 1440)]);
+    sendJson(ws, S.GM_BAN_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.GM_KICK] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = gm.executeGMCommand(cid, 'kick', [req.targetName]);
+    sendJson(ws, S.GM_KICK_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Hot Events ────────────────────────────
+HANDLERS[C.HOT_EVENTS] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const events = hotEvents.getHotEvents(cid);
+  sendJson(ws, S.HOT_EVENTS, { events });
+};
+
+HANDLERS[C.CLAIM_EVENT] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = hotEvents.claimEventReward(cid, req.eventId, req.tier || 1);
+    sendJson(ws, S.CLAIM_EVENT_RSP, result);
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
