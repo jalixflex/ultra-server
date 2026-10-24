@@ -327,6 +327,7 @@ Client'ın kullandığı gerçek opcode'ları sunucunun opcodes.js dosyasıyla k
 
 ### Tamamlanması Gereken Kod Düzeltmeleri
 
+### Client Verisine Bağımlı (14GB client'tan çıkarılmalı)
 - [ ] **Protobuf tanımları**: Client .proto dosyalarından çıkarılıp `proto.js`/`proto-game.js`'e eklenmeli (216 sendJson → encode dönüşümü)
 - [ ] **Item template sistemi**: Client item verilerinden `server/data/items.json` oluşturulmalı, inventory.js bu tabloyu kullanmalı
 - [ ] **Quest içeriği**: Client quest verilerinden 200+ görev quest.js'e aktarılmalı
@@ -334,18 +335,24 @@ Client'ın kullandığı gerçek opcode'ları sunucunun opcodes.js dosyasıyla k
 - [ ] **Monster templates**: Client monster verilerinden 500+ canavar battle.js'e aktarılmalı
 - [ ] **Shop kataloğu**: Client shop verilerinden 100+ item shop.js'e aktarılmalı
 - [ ] **Map zones**: Client harita verilerinden 15+ zone world-map.js'e aktarılmalı
-- [ ] **Skill verileri**: Client skill verilerinden sınıf becerileri skills.js'e aktarılmalı (şu an battle.js ile skills.js ayrı CLASS_SKILLS kullanıyor)
-- [ ] **Seviye bazlı stat büyümesi**: Her level up'da base stat artışı (sınıfa göre farklı)
+- [ ] **Skill verileri**: Client skill verilerinden sınıf becerileri skills.js'e aktarılmalı
 - [ ] **Equipment set bonusları**: Set parçaları birlikte bonus vermeli
-- [ ] **Karakter oluşturma**: `giveStarterItems()` handlers.js'de çağrılmalı, job parametresi eklenmeli
-- [ ] **Battle ↔ Skills entegrasyonu**: skills.js'te öğrenilen beceriler battle.js'te kullanılmalı
-- [ ] **Quest progress tetikleyicileri**: Kill/equip/recruit/guild/arena gibi aksiyonlar quest ilerletmeli
-- [ ] **Feature unlock gating**: Her sistem featureUnlock.isFeatureUnlocked() kontrol etmeli
-- [ ] **Achievement tetikleyicileri**: Oyun aksiyonları achievement.js'i tetiklemeli
-- [ ] **Ranking otomatik güncelleme**: Güç/arena/level değişimlerinde sıralama güncellemeli
-- [ ] **VIP bonus entegrasyonu**: EXP/gold kazanımları VIP çarpanı uygullamalı
-- [ ] **Gacha item ödülleri**: Item tipi ödüller envantere eklenmeli
-- [ ] **Drop sistemi**: Monster drop tablosundan gerçek item ID vermeli
+
+### Tamamlanan Özellikler (v6.0)
+- [x] **Seviye bazlı stat büyümesi**: `inventory.js recalcStats` — sınıf+seviye bazlı base/growth tablosu (Knight/Mage/Archer)
+- [x] **Karakter oluşturma**: `handlers.js` — job parametresi, `giveStarterItems()`, `giveStarterSkills()`, `recalcStats()` çağrılıyor
+- [x] **Battle ↔ Skills entegrasyonu**: `battle.js startBattle` — öğrenilen skill seviyeleri multiplier'ları artırıyor
+- [x] **Quest progress tetikleyicileri**: Kill monster, equip item, arena, guild join tetikliyor
+- [x] **Feature unlock gating**: Arena(13), Guild(12), Gacha(10), Astral(25), Forge(10) seviye kontrolü
+- [x] **Achievement tetikleyicileri**: Battle gold_total, arena_wins, guild_join incrementStat çağrıları
+- [x] **Ranking otomatik güncelleme**: `inventory.recalcStats` ve `battle.endBattle` → `ranking.updatePlayerRanking()`
+- [x] **VIP bonus entegrasyonu**: `battle.js endBattle` — VIP exp/gold çarpanı uygulanıyor
+- [x] **Gacha item ödülleri**: `gacha.js pull` — item ödüller `inventory.addItem()` ile veriliyor, string→numeric ID map
+- [x] **Drop sistemi**: `battle.js generateDrops` — düzgün item tabloları (consumable/weapon/armor/accessory/material)
+- [x] **Battle class mapping düzeltmesi**: `getClassSkills` job 1=Knight, 2=Mage, 3=Archer olarak düzeltildi
+- [x] **Level cap tutarlılığı**: quest.js ve battle.js aynı cap (100)
+
+### Kalan Kod Düzeltmeleri
 - [ ] **Şifre hashleme**: Düz metin yerine bcrypt/argon2 kullanılmalı
 
 ## Dosya Yapısı
