@@ -238,11 +238,17 @@ function getPlayerGuild(charId) {
     .get(charId);
 }
 
+function getMemberInfo(charId) {
+  const row = getPlayerGuild(charId);
+  if (!row) return null;
+  return { guildId: row.guild_id, charId: row.char_id, rank: row.rank };
+}
+
 module.exports = {
   OPCODES, RANK,
   initDB,
   createGuild, joinGuild, leaveGuild,
   kickMember, promoteMember, donateToGuild,
   getGuild, getGuildByName, getGuildList,
-  getGuildMembers, getPlayerGuild,
+  getGuildMembers, getPlayerGuild, getMemberInfo,
 };

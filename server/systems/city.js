@@ -67,6 +67,30 @@ const BUILDINGS = [
     unlockLevel: 11,
     effect: l => ({ plots: Math.min(3 + Math.floor(l / 5), 9) }),
   },
+  {
+    id: 'market', name: 'Market', maxLevel: 80,
+    desc: 'Trade resources and buy items at reduced prices.',
+    goldCost: l => 90 * l * l,
+    timeSec: l => 5 * l,
+    unlockLevel: 3,
+    effect: l => ({ shopDiscount: Math.min(l, 30), tradeSlots: Math.min(1 + Math.floor(l / 10), 6) }),
+  },
+  {
+    id: 'tower', name: 'Tower', maxLevel: 80,
+    desc: 'Watchtower for city defense and scouting.',
+    goldCost: l => 160 * l * l,
+    timeSec: l => 8 * l,
+    unlockLevel: 10,
+    effect: l => ({ scoutRange: l, cityDefence: l * 50 }),
+  },
+  {
+    id: 'arena_building', name: 'Arena', maxLevel: 80,
+    desc: 'Unlock arena features and increase daily attempts.',
+    goldCost: l => 140 * l * l,
+    timeSec: l => 7 * l,
+    unlockLevel: 13,
+    effect: l => ({ arenaAttempts: 5 + Math.floor(l / 10) }),
+  },
 ];
 
 function initDB() {

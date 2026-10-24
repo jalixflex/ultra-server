@@ -44,6 +44,31 @@ const clothing = require('./systems/clothing');
 const classAdvance = require('./systems/class-advance');
 const buff = require('./systems/buff');
 const worldMap = require('./systems/world-map');
+const talent = require('./systems/talent');
+const rune = require('./systems/rune');
+const eudaemon = require('./systems/eudaemon');
+const honor = require('./systems/honor');
+const dragonSoul = require('./systems/dragon-soul');
+const holyForge = require('./systems/holy-forge');
+const guildExtras = require('./systems/guild-extras');
+const spire = require('./systems/spire');
+const dimensionalWar = require('./systems/dimensional-war');
+const circuitQuest = require('./systems/circuit-quest');
+const gem = require('./systems/gem');
+const resistance = require('./systems/resistance');
+const henna = require('./systems/henna');
+const achievement = require('./systems/achievement');
+const events = require('./systems/events');
+const gacha = require('./systems/gacha');
+const ranking = require('./systems/ranking');
+const social = require('./systems/social');
+const knighthood = require('./systems/knighthood');
+const jewelHunt = require('./systems/jewel-hunt');
+const cloudAdventure = require('./systems/cloud-adventure');
+const purgatoryMaze = require('./systems/purgatory-maze');
+const archaeology = require('./systems/archaeology');
+const crossServer = require('./systems/cross-server');
+const tutorial = require('./systems/tutorial');
 
 /**
  * Per-connection state stored on the ws object:
@@ -1380,6 +1405,812 @@ HANDLERS[C.MAP_TELEPORT] = (ws, body) => {
     const result = worldMap.teleport(cid, req.mapId);
     sendJson(ws, S.MAP_TELEPORT_RSP, result);
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Talent ────────────────────────────────
+HANDLERS[C.TALENT_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.TALENT_INFO_RSP, talent.getTalentInfo(cid));
+};
+
+HANDLERS[C.TALENT_UPGRADE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.TALENT_UPGRADE_RSP, talent.upgradeTalent(cid, req.talentId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.HOLY_SEAL_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.HOLY_SEAL_INFO_RSP, talent.getHolySealInfo(cid));
+};
+
+HANDLERS[C.HOLY_SEAL_UPGRADE] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.HOLY_SEAL_UPGRADE_RSP, talent.upgradeHolySeal(cid));
+};
+
+// ─── Rune ──────────────────────────────────
+HANDLERS[C.RUNE_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.RUNE_INFO_RSP, rune.getRuneInfo(cid));
+};
+
+HANDLERS[C.RUNE_EQUIP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.RUNE_UPDATE, rune.equipRune(cid, req.runeId, req.slot));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.RUNE_UNEQUIP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.RUNE_UPDATE, rune.unequipRune(cid, req.slot));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.RUNE_UPGRADE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.RUNE_UPDATE, rune.upgradeRune(cid, req.runeId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Eudaemon ──────────────────────────────
+HANDLERS[C.EUDAEMON_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.EUDAEMON_LIST_RSP, eudaemon.getEudaemonList(cid));
+};
+
+HANDLERS[C.EUDAEMON_SUMMON] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.EUDAEMON_UPDATE, eudaemon.summonEudaemon(cid, req.typeId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.EUDAEMON_EQUIP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.EUDAEMON_UPDATE, eudaemon.equipEudaemon(cid, req.eudaemonId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.EUDAEMON_LEVEL_UP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.EUDAEMON_UPDATE, eudaemon.levelUpEudaemon(cid, req.eudaemonId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.EUDAEMON_STAR_UP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.EUDAEMON_UPDATE, eudaemon.starUpEudaemon(cid, req.eudaemonId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.EUDAEMON_SKILL] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.EUDAEMON_UPDATE, eudaemon.learnSkill(cid, req.eudaemonId, req.skillId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.PATROL_START] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.PATROL_UPDATE, eudaemon.startPatrol(cid, req.eudaemonId, req.difficulty));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.PATROL_COLLECT] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.PATROL_UPDATE, eudaemon.collectPatrol(cid, req.patrolId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.PATROL_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.PATROL_LIST_RSP, eudaemon.getPatrolList(cid));
+};
+
+// ─── Honor ─────────────────────────────────
+HANDLERS[C.HONOR_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.HONOR_INFO_RSP, honor.getHonorInfo(cid));
+};
+
+HANDLERS[C.MEDALLION_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.MEDALLION_INFO_RSP, honor.getMedallionInfo(cid));
+};
+
+HANDLERS[C.MEDALLION_BUY] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.MEDALLION_UPDATE, honor.buyMedallion(cid, req.tierId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.MEDALLION_EQUIP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.MEDALLION_UPDATE, honor.equipMedallion(cid, req.medallionId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Dragon Soul ───────────────────────────
+HANDLERS[C.DRAGON_SOUL_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.DRAGON_SOUL_LIST_RSP, dragonSoul.getDragonSouls(cid));
+};
+
+HANDLERS[C.DRAGON_SOUL_UNLOCK] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.DRAGON_SOUL_UPDATE, dragonSoul.unlockDragonSoul(cid, req.element));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.DRAGON_SOUL_UPGRADE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.DRAGON_SOUL_UPDATE, dragonSoul.upgradeDragonSoul(cid, req.soulId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.DRAGON_SOUL_EQUIP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.DRAGON_SOUL_UPDATE, dragonSoul.equipDragonSoul(cid, req.soulId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Holy Forge ────────────────────────────
+HANDLERS[C.HOLY_FORGE_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.HOLY_FORGE_INFO_RSP, holyForge.getInfo(cid));
+};
+
+HANDLERS[C.HOLY_FORGE_UPGRADE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.HOLY_FORGE_UPGRADE_RSP, holyForge.upgrade(cid, req.slot));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.HOLY_FORGE_ACTIVATE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.HOLY_FORGE_ACTIVATE_RSP, holyForge.activate(cid, req.slot));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Guild Extras ──────────────────────────
+HANDLERS[C.GUILD_ALTAR_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.GUILD_ALTAR_INFO_RSP, guildExtras.getAltarInfo(cid));
+};
+
+HANDLERS[C.GUILD_ALTAR_SPIN] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.GUILD_ALTAR_SPIN_RSP, guildExtras.spinAltar(cid));
+};
+
+HANDLERS[C.GUILD_BEAST_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.GUILD_BEAST_INFO_RSP, guildExtras.getBeastInfo(cid));
+};
+
+HANDLERS[C.GUILD_BEAST_ATTACK] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.GUILD_BEAST_ATTACK_RSP, guildExtras.attackBeast(cid));
+};
+
+HANDLERS[C.GUILD_SHOP_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.GUILD_SHOP_LIST_RSP, guildExtras.getGuildShopList(cid));
+};
+
+HANDLERS[C.GUILD_SHOP_BUY] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.GUILD_SHOP_BUY_RSP, guildExtras.buyGuildShopItem(cid, req.itemId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.GUILD_WAR_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.GUILD_WAR_INFO_RSP, guildExtras.getWarInfo(cid));
+};
+
+HANDLERS[C.GUILD_WAR_ATTACK] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.GUILD_WAR_ATTACK_RSP, guildExtras.attackTower(cid, req.towerId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.GUILD_WAR_RANK] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.GUILD_WAR_RANK_RSP, guildExtras.getWarRanking(cid));
+};
+
+// ─── Spire ─────────────────────────────────
+HANDLERS[C.SPIRE_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.SPIRE_INFO_RSP, spire.getSpireInfo(cid));
+};
+
+HANDLERS[C.SPIRE_FIGHT] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.SPIRE_FIGHT_RSP, spire.fightFloor(cid));
+};
+
+HANDLERS[C.SPIRE_RESET] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.SPIRE_RESET_RSP, spire.resetSpire(cid));
+};
+
+// ─── Dimensional War ───────────────────────
+HANDLERS[C.DIMWAR_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.DIMWAR_INFO_RSP, dimensionalWar.getDimWarInfo(cid));
+};
+
+HANDLERS[C.DIMWAR_ENTER] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.DIMWAR_ENTER_RSP, dimensionalWar.enterFloor(cid, req.floor));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.DIMWAR_FIGHT] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.DIMWAR_FIGHT_RSP, dimensionalWar.fightRoom(cid, req.roomIndex));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.DIMWAR_COLLECT] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.DIMWAR_COLLECT_RSP, dimensionalWar.collectRewards(cid));
+};
+
+// ─── Circuit Quest ─────────────────────────
+HANDLERS[C.CIRCUIT_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.CIRCUIT_INFO_RSP, circuitQuest.getCircuitInfo(cid));
+};
+
+HANDLERS[C.CIRCUIT_ACCEPT] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.CIRCUIT_ACCEPT_RSP, circuitQuest.acceptCircuitQuest(cid, req.questIndex));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.CIRCUIT_COMPLETE] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.CIRCUIT_COMPLETE_RSP, circuitQuest.completeCircuitQuest(cid));
+};
+
+HANDLERS[C.CIRCUIT_REFRESH] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.CIRCUIT_REFRESH_RSP, circuitQuest.refreshCircuitQuest(cid));
+};
+
+// ─── Gem ───────────────────────────────────
+HANDLERS[C.GEM_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.GEM_LIST_RSP, gem.getGemInventory(cid));
+};
+
+HANDLERS[C.GEM_COMBINE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.GEM_COMBINE_RSP, gem.combineGems(cid, req.gemType, req.gemLevel));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Resistance ────────────────────────────
+HANDLERS[C.RESIST_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.RESIST_INFO_RSP, resistance.getResistInfo(cid));
+};
+
+// ─── Henna ─────────────────────────────────
+HANDLERS[C.HENNA_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.HENNA_INFO_RSP, henna.getHennaInfo(cid));
+};
+
+HANDLERS[C.HENNA_APPLY] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.HENNA_APPLY_RSP, henna.applyHenna(cid, req.slot, req.hennaId, req.grade));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.HENNA_REMOVE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.HENNA_REMOVE_RSP, henna.removeHenna(cid, req.slot));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Achievement ───────────────────────────
+HANDLERS[C.ACHIEVEMENT_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.ACHIEVEMENT_LIST_RSP, achievement.getAchievementList(cid));
+};
+
+HANDLERS[C.ACHIEVEMENT_CLAIM] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.ACHIEVEMENT_CLAIM_RSP, achievement.claimAchievement(cid, req.achievementId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Events ────────────────────────────────
+HANDLERS[C.EVENT_LIST] = (ws) => {
+  sendJson(ws, S.EVENT_LIST_RSP, events.getActiveEvents());
+};
+
+HANDLERS[C.EVENT_INFO] = (ws, body) => {
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.EVENT_INFO_RSP, events.getEventInfo(req.eventId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.HOT_EVENT_CLAIM] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.HOT_EVENT_CLAIM_RSP, events.claimHotEventReward(cid, req.tierId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Gacha ─────────────────────────────────
+HANDLERS[C.GACHA_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.GACHA_INFO_RSP, gacha.getInfo(cid));
+};
+
+HANDLERS[C.GACHA_SPIN] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.GACHA_SPIN_RSP, gacha.spin(cid, req.poolId, 1));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.GACHA_TEN_SPIN] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.GACHA_TEN_SPIN_RSP, gacha.spin(cid, req.poolId, 10));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Ranking ───────────────────────────────
+HANDLERS[C.RANKING_LIST] = (ws, body) => {
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.RANKING_LIST_RSP, ranking.getRankingList(req.rankingType));
+  } catch (e) {
+    sendJson(ws, S.RANKING_LIST_RSP, ranking.getAllRankingTypes());
+  }
+};
+
+HANDLERS[C.RANKING_DETAIL] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.RANKING_DETAIL_RSP, ranking.getPlayerRank(cid, req.rankingType));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Social ────────────────────────────────
+HANDLERS[C.PLAYER_SEARCH] = (ws, body) => {
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.PLAYER_SEARCH_RSP, social.searchPlayers(req.query, req.limit));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.PLAYER_PROFILE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.PLAYER_PROFILE_RSP, social.getPlayerProfile(cid, req.targetId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.BLOCK_PLAYER] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.BLOCK_PLAYER_RSP, social.blockPlayer(cid, req.targetId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.UNBLOCK_PLAYER] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.UNBLOCK_PLAYER_RSP, social.unblockPlayer(cid, req.targetId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.BLOCK_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.BLOCK_LIST_RSP, social.getBlockList(cid));
+};
+
+HANDLERS[C.RECENT_CONTACTS] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.RECENT_CONTACTS_RSP, social.getRecentContacts(cid));
+};
+
+HANDLERS[C.TRADE_REQUEST] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.TRADE_REQUEST_RSP, social.requestTrade(cid, req.targetId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.TRADE_CONFIRM] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.TRADE_CONFIRM_RSP, social.confirmTrade(cid, req.tradeId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.TRADE_CANCEL] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.TRADE_CANCEL_RSP, social.cancelTrade(cid, req.tradeId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Knighthood ────────────────────────────
+HANDLERS[C.KNIGHTHOOD_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.KNIGHTHOOD_INFO_RSP, knighthood.getKnighthoodInfo(cid));
+};
+
+HANDLERS[C.KNIGHTHOOD_UPGRADE] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.KNIGHTHOOD_UPGRADE_RSP, knighthood.gainKhExp(cid, 100));
+};
+
+HANDLERS[C.KNIGHTHOOD_SKILL] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.KNIGHTHOOD_SKILL_RSP, knighthood.upgradeKhSkill(cid, req.skillId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.KNIGHTHOOD_SET_ACTIVE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.KNIGHTHOOD_SET_ACTIVE_RSP, knighthood.setActiveSkills(cid, req.skillIds));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Jewel Hunt ────────────────────────────
+HANDLERS[C.JEWEL_HUNT_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.JEWEL_HUNT_INFO_RSP, jewelHunt.getJewelHuntInfo(cid));
+};
+
+HANDLERS[C.JEWEL_HUNT_START] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.JEWEL_HUNT_START_RSP, jewelHunt.startJewelHunt(cid));
+};
+
+HANDLERS[C.JEWEL_HUNT_MOVE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.JEWEL_HUNT_MOVE_RSP, jewelHunt.makeMove(cid, req.fromRow, req.fromCol, req.toRow, req.toCol));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.JEWEL_HUNT_COLLECT] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.JEWEL_HUNT_COLLECT_RSP, jewelHunt.collectJewelReward(cid));
+};
+
+// ─── Cloud Adventure ───────────────────────
+HANDLERS[C.CLOUD_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.CLOUD_INFO_RSP, cloudAdventure.getCloudInfo(cid));
+};
+
+HANDLERS[C.CLOUD_ENTER] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.CLOUD_ENTER_RSP, cloudAdventure.enterFloor(cid, req.floor));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.CLOUD_COMPLETE] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.CLOUD_COMPLETE_RSP, cloudAdventure.completeFloor(cid));
+};
+
+HANDLERS[C.CLOUD_REWARDS] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.CLOUD_REWARDS_RSP, cloudAdventure.getFloorRewards(cid));
+};
+
+// ─── Purgatory Maze ────────────────────────
+HANDLERS[C.MAZE_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.MAZE_INFO_RSP, purgatoryMaze.getMazeInfo(cid));
+};
+
+HANDLERS[C.MAZE_ENTER] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.MAZE_ENTER_RSP, purgatoryMaze.enterMaze(cid));
+};
+
+HANDLERS[C.MAZE_MOVE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.MAZE_MOVE_RSP, purgatoryMaze.moveRoom(cid, req.roomId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.MAZE_FIGHT] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.MAZE_FIGHT_RSP, purgatoryMaze.fightRoom(cid));
+};
+
+HANDLERS[C.MAZE_BOSS] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.MAZE_BOSS_RSP, purgatoryMaze.getLayerBoss(cid));
+};
+
+HANDLERS[C.MAZE_COMPLETE] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.MAZE_COMPLETE_RSP, purgatoryMaze.completeMaze(cid));
+};
+
+// ─── Archaeology ───────────────────────────
+HANDLERS[C.ARCHAEOLOGY_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.ARCHAEOLOGY_INFO_RSP, archaeology.getArchaeologyInfo(cid));
+};
+
+HANDLERS[C.ARCHAEOLOGY_DIG] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.ARCHAEOLOGY_DIG_RSP, archaeology.dig(cid));
+};
+
+HANDLERS[C.ARCHAEOLOGY_COLLECTION] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.ARCHAEOLOGY_COLLECTION_RSP, archaeology.getCollection(cid));
+};
+
+HANDLERS[C.ARCHAEOLOGY_CLAIM_SET] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.ARCHAEOLOGY_CLAIM_SET_RSP, archaeology.claimSetReward(cid, req.setId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Cross Server ──────────────────────────
+HANDLERS[C.CS_ARENA_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.CS_ARENA_INFO_RSP, crossServer.getCsArenaInfo(cid));
+};
+
+HANDLERS[C.CS_ARENA_MATCH] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.CS_ARENA_MATCH_RSP, crossServer.startCsArenaMatch(cid));
+};
+
+HANDLERS[C.CS_ARENA_COMPLETE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.CS_ARENA_COMPLETE_RSP, crossServer.completeCsArenaMatch(cid, req.won));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.CS_ARENA_RANKING] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.CS_ARENA_RANKING_RSP, crossServer.getCsArenaRanking());
+};
+
+HANDLERS[C.CS_GW_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.CS_GW_INFO_RSP, crossServer.getCsGuildWarInfo(cid));
+};
+
+HANDLERS[C.CS_GW_RANKING] = (ws) => {
+  sendJson(ws, S.CS_GW_RANKING_RSP, crossServer.getCsGuildWarRanking());
+};
+
+HANDLERS[C.CS_SEASON_REWARDS] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.CS_SEASON_REWARDS_RSP, crossServer.getSeasonRewards(cid));
+};
+
+// ─── Tutorial ──────────────────────────────
+HANDLERS[C.TUTORIAL_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.TUTORIAL_INFO_RSP, tutorial.getTutorialInfo(cid));
+};
+
+HANDLERS[C.TUTORIAL_STEP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.TUTORIAL_STEP_RSP, tutorial.advanceStep(cid, req.stepId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.TUTORIAL_COMPLETE] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.TUTORIAL_COMPLETE_RSP, tutorial.skipTutorial(cid));
+};
+
+HANDLERS[C.NPC_DIALOG_NEXT] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.NPC_DIALOG_RSP, tutorial.advanceDialog(cid, req.npcId));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.TUTORIAL_SKIP] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.TUTORIAL_SKIP_RSP, tutorial.skipTutorial(cid));
 };
 
 module.exports = { handlePacket, sendPacket };
