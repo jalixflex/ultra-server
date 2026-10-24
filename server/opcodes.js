@@ -151,6 +151,49 @@ const C = {
   CATACOMBS_INFO:      0x6700,
   CATACOMBS_FIGHT:     0x6701,
   CATACOMBS_RESET:     0x6702,
+
+  // Party / MPD
+  PARTY_CREATE:        0x6A00,
+  PARTY_INVITE:        0x6A01,
+  PARTY_ACCEPT:        0x6A02,
+  PARTY_LEAVE:         0x6A03,
+  PARTY_KICK:          0x6A04,
+  PARTY_INFO:          0x6A05,
+  MPD_LIST:            0x6A06,
+  MPD_ENTER:           0x6A07,
+  MPD_FIGHT:           0x6A08,
+  MPD_INFO:            0x6A09,
+
+  // Battleground
+  BG_INFO:             0x6B00,
+  BG_JOIN:             0x6B01,
+  BG_ATTACK:           0x6B02,
+  BG_CAPTURE:          0x6B03,
+  BG_RESULTS:          0x6B04,
+  BG_RANKING:          0x6B05,
+
+  // Clothing
+  CLOTHING_LIST:       0x6C00,
+  CLOTHING_EQUIP:      0x6C01,
+  CLOTHING_UPGRADE:    0x6C02,
+  CLOTHING_SYNTHESIZE: 0x6C03,
+  CLOTHING_BUY:        0x6C04,
+
+  // Class Advancement
+  ADVANCE_INFO:        0x6D00,
+  ADVANCE_START:       0x6D01,
+  ADVANCE_TRIAL:       0x6D02,
+  ADVANCE_CHOOSE:      0x6D03,
+
+  // Buff
+  BUFF_LIST:           0x6E00,
+
+  // World Map
+  MAP_ENTER:           0x6F00,
+  MAP_MOVE:            0x6F01,
+  MAP_NPC_LIST:        0x6F02,
+  MAP_NPC_TALK:        0x6F03,
+  MAP_TELEPORT:        0x6F04,
 };
 
 // ═══════════════════════════════════════════
@@ -269,6 +312,41 @@ const S = {
   // Catacombs
   CATACOMBS_INFO_RSP:    0x6710,
   CATACOMBS_FIGHT_RSP:   0x6711,
+
+  // Party / MPD
+  PARTY_INFO_RSP:        0x6A10,
+  PARTY_INVITE_RSP:      0x6A11,
+  MPD_LIST_RSP:          0x6A16,
+  MPD_ENTER_RSP:         0x6A17,
+  MPD_FIGHT_RSP:         0x6A18,
+
+  // Battleground
+  BG_INFO_RSP:           0x6B10,
+  BG_JOIN_RSP:           0x6B11,
+  BG_ATTACK_RSP:         0x6B12,
+  BG_CAPTURE_RSP:        0x6B13,
+  BG_RESULTS_RSP:        0x6B14,
+  BG_RANKING_RSP:        0x6B15,
+
+  // Clothing
+  CLOTHING_LIST_RSP:     0x6C10,
+  CLOTHING_UPDATE:       0x6C11,
+
+  // Class Advancement
+  ADVANCE_INFO_RSP:      0x6D10,
+  ADVANCE_START_RSP:     0x6D11,
+  ADVANCE_TRIAL_RSP:     0x6D12,
+  ADVANCE_CHOOSE_RSP:    0x6D13,
+
+  // Buff
+  BUFF_LIST_RSP:         0x6E10,
+
+  // World Map
+  MAP_ENTER_RSP:         0x6F10,
+  MAP_MOVE_RSP:          0x6F11,
+  MAP_NPC_LIST_RSP:      0x6F12,
+  MAP_NPC_DIALOG:        0x6F13,
+  MAP_TELEPORT_RSP:      0x6F14,
 };
 
 // Reverse lookup: number → name

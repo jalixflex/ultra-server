@@ -38,6 +38,12 @@ const devotion = require('./systems/devotion');
 const dailyLogin = require('./systems/daily-login');
 const worldBoss = require('./systems/world-boss');
 const catacombs = require('./systems/catacombs');
+const party = require('./systems/party');
+const battleground = require('./systems/battleground');
+const clothing = require('./systems/clothing');
+const classAdvance = require('./systems/class-advance');
+const buff = require('./systems/buff');
+const worldMap = require('./systems/world-map');
 
 /**
  * Per-connection state stored on the ws object:
@@ -1107,6 +1113,273 @@ HANDLERS[C.CATACOMBS_RESET] = (ws) => {
   if (!cid) return;
   const result = catacombs.resetFloor(cid);
   sendSimpleResult(ws, result.success, result.msg);
+};
+
+// ─── Party / MPD ────────────────────────────
+HANDLERS[C.PARTY_CREATE] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = party.createParty(cid);
+  sendJson(ws, S.PARTY_INFO_RSP, result);
+};
+
+HANDLERS[C.PARTY_INVITE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = party.inviteToParty(cid, req.targetId);
+    sendJson(ws, S.PARTY_INVITE_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.PARTY_ACCEPT] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = party.acceptInvite(cid, req.partyId);
+    sendJson(ws, S.PARTY_INFO_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.PARTY_LEAVE] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = party.leaveParty(cid);
+  sendSimpleResult(ws, result.success, result.msg);
+};
+
+HANDLERS[C.PARTY_KICK] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = party.kickMember(cid, req.targetId);
+    sendSimpleResult(ws, result.success, result.msg);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.PARTY_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const info = party.getPartyInfo(cid);
+  sendJson(ws, S.PARTY_INFO_RSP, info);
+};
+
+HANDLERS[C.MPD_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const list = party.getDungeonList(cid);
+  sendJson(ws, S.MPD_LIST_RSP, list);
+};
+
+HANDLERS[C.MPD_ENTER] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = party.enterDungeon(cid, req.dungeonId, req.difficulty);
+    sendJson(ws, S.MPD_ENTER_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.MPD_FIGHT] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = party.fightBoss(cid);
+  sendJson(ws, S.MPD_FIGHT_RSP, result);
+};
+
+// ─── Battleground ───────────────────────────
+HANDLERS[C.BG_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const info = battleground.getBGInfo(cid);
+  sendJson(ws, S.BG_INFO_RSP, info);
+};
+
+HANDLERS[C.BG_JOIN] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = battleground.joinBattleground(cid, req.mode || 0);
+    sendJson(ws, S.BG_JOIN_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.BG_ATTACK] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = battleground.attackPlayer(cid, req.targetId);
+    sendJson(ws, S.BG_ATTACK_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.BG_CAPTURE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = battleground.capturePoint(cid, req.pointId);
+    sendJson(ws, S.BG_CAPTURE_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.BG_RESULTS] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = battleground.getBGResults(cid);
+  sendJson(ws, S.BG_RESULTS_RSP, result);
+};
+
+HANDLERS[C.BG_RANKING] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = battleground.getBGRanking(cid);
+  sendJson(ws, S.BG_RANKING_RSP, result);
+};
+
+// ─── Clothing ───────────────────────────────
+HANDLERS[C.CLOTHING_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const list = clothing.getClothingList(cid);
+  sendJson(ws, S.CLOTHING_LIST_RSP, list);
+};
+
+HANDLERS[C.CLOTHING_EQUIP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = clothing.equipClothing(cid, req.clothingId);
+    sendJson(ws, S.CLOTHING_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.CLOTHING_UPGRADE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = clothing.upgradeClothing(cid, req.clothingId);
+    sendJson(ws, S.CLOTHING_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.CLOTHING_SYNTHESIZE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = clothing.synthesizeClothing(cid, req.materialIds);
+    sendJson(ws, S.CLOTHING_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.CLOTHING_BUY] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = clothing.buyClothing(cid, req.setId);
+    sendJson(ws, S.CLOTHING_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Class Advancement ──────────────────────
+HANDLERS[C.ADVANCE_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const info = classAdvance.getAdvanceInfo(cid);
+  sendJson(ws, S.ADVANCE_INFO_RSP, info);
+};
+
+HANDLERS[C.ADVANCE_START] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = classAdvance.startAdvanceQuest(cid);
+  sendJson(ws, S.ADVANCE_START_RSP, result);
+};
+
+HANDLERS[C.ADVANCE_TRIAL] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = classAdvance.fightTrial(cid, req.trialNum);
+    sendJson(ws, S.ADVANCE_TRIAL_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.ADVANCE_CHOOSE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = classAdvance.chooseSpecialization(cid, req.specId);
+    sendJson(ws, S.ADVANCE_CHOOSE_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Buff ───────────────────────────────────
+HANDLERS[C.BUFF_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const buffs = buff.getActiveBuffs(cid);
+  sendJson(ws, S.BUFF_LIST_RSP, { buffs });
+};
+
+// ─── World Map ──────────────────────────────
+HANDLERS[C.MAP_ENTER] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = worldMap.enterMap(cid, req.mapId);
+    sendJson(ws, S.MAP_ENTER_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.MAP_MOVE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = worldMap.movePlayer(cid, req.x, req.y);
+    sendJson(ws, S.MAP_MOVE_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.MAP_NPC_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = worldMap.getNpcList(cid);
+  sendJson(ws, S.MAP_NPC_LIST_RSP, result);
+};
+
+HANDLERS[C.MAP_NPC_TALK] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = worldMap.talkToNpc(cid, req.npcId);
+    sendJson(ws, S.MAP_NPC_DIALOG, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.MAP_TELEPORT] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = worldMap.teleport(cid, req.mapId);
+    sendJson(ws, S.MAP_TELEPORT_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
 module.exports = { handlePacket, sendPacket };

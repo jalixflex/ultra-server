@@ -42,6 +42,12 @@ const dailyLogin = require('./systems/daily-login');
 const worldBoss = require('./systems/world-boss');
 const catacombs = require('./systems/catacombs');
 const featureUnlock = require('./systems/feature-unlock');
+const party = require('./systems/party');
+const battleground = require('./systems/battleground');
+const clothing = require('./systems/clothing');
+const classAdvance = require('./systems/class-advance');
+const buff = require('./systems/buff');
+const worldMap = require('./systems/world-map');
 
 // ─── Configuration ───────────────────────
 const PORT = parseInt(process.env.PORT, 10) || 8899;
@@ -81,7 +87,13 @@ devotion.initDB();
 dailyLogin.initDB();
 worldBoss.initDB();
 catacombs.initDB();
-console.log('[DB] Database ready (all systems).');
+party.initDB();
+battleground.initDB();
+clothing.initDB();
+classAdvance.initDB();
+buff.initDB();
+worldMap.initDB();
+console.log('[DB] Database ready (31 systems).');
 
 // ─── Create HTTP Server ──────────────────
 const httpHandler = createHttpHandler(config);
@@ -144,19 +156,21 @@ wss.on('connection', (ws, req) => {
 server.listen(PORT, HOST, () => {
   console.log('');
   console.log('╔══════════════════════════════════════════════╗');
-  console.log('║       Wartune Ultra Server v2.0.0            ║');
+  console.log('║       Wartune Ultra Server v3.0.0            ║');
   console.log('╠══════════════════════════════════════════════╣');
   console.log(`║  HTTP + WS : ${HOST}:${PORT}                    ║`);
   console.log(`║  Public    : ${PUBLIC_HOST}:${PORT}              ║`);
   console.log('║  Database  : SQLite (data/wartune.db)        ║');
-  console.log('║  25 Systems Loaded:                          ║');
+  console.log('║  31 Systems Loaded:                          ║');
   console.log('║  Core: Login, Chat, Battle, Inventory        ║');
-  console.log('║  Social: Guild, Mail, Friends, Arena         ║');
+  console.log('║  Social: Guild, Mail, Friends, Arena, Party  ║');
   console.log('║  Quest: Story, Bounty, Devotion, Daily Login ║');
-  console.log('║  World: Campaign(6ch), World Boss, Catacombs ║');
+  console.log('║  World: Campaign, World Boss, Catacombs, Map ║');
+  console.log('║  PvP: Arena, Battleground                    ║');
   console.log('║  Progress: Skills, Wings, Academy, Forge     ║');
   console.log('║  Companion: Astral, Sylph, Mount, Troops     ║');
-  console.log('║  Economy: Shop, VIP, Farm, City Buildings    ║');
+  console.log('║  Economy: Shop, VIP, Farm, City, Clothing    ║');
+  console.log('║  Endgame: Class Advance, MPD, Buff/Rage      ║');
   console.log('╚══════════════════════════════════════════════╝');
   console.log('');
 });
