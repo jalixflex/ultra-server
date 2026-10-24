@@ -160,6 +160,7 @@ function equipItem(charId, itemDbId, slot) {
 
   // Recalculate stats
   recalcStats(charId);
+  try { require('./quest').updateProgress(charId, 'equip_item', item.item_id); } catch (e) { /* ignore */ }
   return { success: true };
 }
 

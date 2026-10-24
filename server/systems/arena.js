@@ -47,6 +47,11 @@ function getArenaInfo(charId) {
 function challenge(charId, targetId) {
   if (charId === targetId) return { success: false, msg: 'Cannot challenge yourself' };
 
+  const char = db.getCharacterById(charId);
+  if (char && !require('./feature-unlock').isFeatureUnlocked(char.grade, 'arena')) {
+    return { success: false, msg: 'Arena unlocks at level 13' };
+  }
+
   ensureEntry(charId);
   ensureEntry(targetId);
   resetDaily(charId);
@@ -87,6 +92,13 @@ function challenge(charId, targetId) {
         honor = honor + ?, daily_attempts = daily_attempts + 1 WHERE char_id = ?
     `).run(honorGain, charId);
   }
+
+  // Achievement + quest + ranking triggers
+  try {
+    const achievement = require('./achievement');
+    if (won) achievement.incrementStat(charId, 'arena_wins', 1);
+  } catch (e) { /* ignore */ }
+  try { require('./quest').updateProgress(charId, 'arena_battle', 1); } catch (e) { /* ignore */ }
 
   return { success: true, won, honor: honorGain, rounds: result.rounds };
 }

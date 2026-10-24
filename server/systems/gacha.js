@@ -105,6 +105,11 @@ function getGachaInfo(charId) {
 function pull(charId, bannerId, useFree) {
   const banner = BANNERS[bannerId];
   if (!banner) return { success: false, msg: 'Invalid banner' };
+
+  const char0 = db.getCharacterById(charId);
+  if (char0 && !require('./feature-unlock').isFeatureUnlocked(char0.grade, 'shop')) {
+    return { success: false, msg: 'Gacha unlocks at level 10' };
+  }
   ensureEntry(charId, bannerId);
   const row = db.getDatabase().prepare('SELECT * FROM gacha WHERE char_id = ? AND banner = ?').get(charId, bannerId);
   const today = new Date().toISOString().slice(0, 10);

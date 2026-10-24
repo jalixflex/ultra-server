@@ -67,6 +67,10 @@ function createGuild(charId, guildName) {
   const char = db.getCharacterById(charId);
   if (!char) return { success: false, msg: 'Character not found' };
 
+  if (!require('./feature-unlock').isFeatureUnlocked(char.grade, 'guild')) {
+    return { success: false, msg: 'Guild unlocks at level 12' };
+  }
+
   // Check if already in a guild
   const existing = getPlayerGuild(charId);
   if (existing) return { success: false, msg: 'Already in a guild' };
@@ -103,6 +107,11 @@ function createGuild(charId, guildName) {
 }
 
 function joinGuild(charId, guildId) {
+  const char = db.getCharacterById(charId);
+  if (char && !require('./feature-unlock').isFeatureUnlocked(char.grade, 'guild')) {
+    return { success: false, msg: 'Guild unlocks at level 12' };
+  }
+
   const existing = getPlayerGuild(charId);
   if (existing) return { success: false, msg: 'Already in a guild' };
 
@@ -117,6 +126,9 @@ function joinGuild(charId, guildId) {
     .run(guildId, charId, RANK.MEMBER);
 
   db.updateCharacter(charId, { consortia_id: guildId });
+
+  try { require('./quest').updateProgress(charId, 'join_guild', guildId); } catch (e) { /* ignore */ }
+  try { require('./achievement').incrementStat(charId, 'guild_join', 1); } catch (e) { /* ignore */ }
 
   return { success: true };
 }

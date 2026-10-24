@@ -290,6 +290,12 @@ function completeQuest(charId, questId) {
   // Check level up
   checkLevelUp(charId);
 
+  // Achievement progress
+  try {
+    const achievement = require('./achievement');
+    achievement.incrementStat(charId, 'quests_completed', 1);
+  } catch (e) { /* ignore */ }
+
   // Auto-accept next quest if available
   let nextQuest = null;
   if (q.nextQuest) {

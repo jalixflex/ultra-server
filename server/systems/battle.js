@@ -134,7 +134,26 @@ function startBattle(ws, monsterIds, campaignId = 0) {
     troopData = troops.getActiveTroop(charId);
   } catch (e) { /* troops module may not exist */ }
 
-  const skills = getClassSkills(char.job);
+  const skills = getClassSkills(char.job).map(s => ({ ...s }));
+  // Boost skill multipliers based on learned skill levels
+  const SKILL_MAP = {
+    1: { slash: 101, whirlwind: 103, shield_bash: 102, divine_strike: 104, taunt: 107, ultimate_fury: 108 },
+    2: { fireball: 201, thunderstorm: 202, frost_nova: 203, meteor: 204, mana_shield: 206, armageddon: 208 },
+    3: { arrow_shot: 301, multi_shot: 302, poison_arrow: 303, snipe: 304, evasion: 305, arrow_rain: 308 },
+  };
+  try {
+    const learned = playerSkills.getSkills(charId);
+    const map = SKILL_MAP[char.job] || SKILL_MAP[1];
+    for (const skill of skills) {
+      const learnedId = map[skill.id];
+      if (learnedId) {
+        const ls = learned.find(s => s.id === learnedId && s.unlocked);
+        if (ls && ls.level > 1) {
+          skill.multiplier *= (1 + (ls.level - 1) * 0.1);
+        }
+      }
+    }
+  } catch (e) { /* skills module not ready */ }
   const cooldowns = {};
   for (const s of skills) cooldowns[s.id] = 0;
 
@@ -626,13 +645,20 @@ function endBattle(battleId, won) {
       try {
         const achievement = require('./achievement');
         achievement.incrementStat(battle.player.charId, 'gold_total', goldReward);
+        achievement.incrementStat(battle.player.charId, 'battles_won', 1);
+        achievement.incrementStat(battle.player.charId, 'monsters_killed', battle.monsters.length);
+        for (const m of battle.monsters) {
+          if (m.boss) achievement.incrementStat(battle.player.charId, 'bosses_killed', 1);
+        }
       } catch (e) { /* ignore */ }
 
       // Ranking update
-      try {
-        const ranking = require('./ranking');
-        ranking.updatePlayerRanking(battle.player.charId);
-      } catch (e) { /* ignore */ }
+      if (newLevel > char.grade) {
+        try {
+          const ranking = require('./ranking');
+          ranking.updatePlayerRanking(battle.player.charId);
+        } catch (e) { /* ignore */ }
+      }
     }
   } else {
     db.updateCharacter(battle.player.charId, {
@@ -682,14 +708,33 @@ function expForLevel(level) {
   return Math.floor(100 * level * level * 0.8);
 }
 
+const DROP_TABLES = {
+  consumable: [100001, 100002, 100003, 100004, 100005, 100010, 100011, 100012, 100015, 100020],
+  weapon:     [1001, 1002, 1003, 1010, 1011, 1012, 1020, 1021, 1030, 1031],
+  armor:      [2001, 2002, 2003, 2010, 2011, 2012, 2020, 2021, 2030, 2031],
+  accessory:  [3001, 3002, 3003, 3005, 3010, 3011],
+  material:   [200001, 200002, 200003, 200005, 200010, 200011, 200012, 200015],
+};
+
 function generateDrops(monsters, playerLevel) {
   const drops = [];
   for (const m of monsters) {
-    if (Math.random() < 0.3) {
-      drops.push({ itemId: 100001 + Math.floor(Math.random() * 20), count: 1 + Math.floor(Math.random() * 3), quality: rollQuality(m.level) });
+    if (Math.random() < 0.35) {
+      const pool = DROP_TABLES.consumable;
+      drops.push({ itemId: pool[Math.floor(Math.random() * pool.length)], count: 1 + Math.floor(Math.random() * 3), quality: 0 });
     }
-    if (Math.random() < 0.1) {
-      drops.push({ itemId: 1000 + Math.floor(Math.random() * 50), count: 1, quality: rollQuality(m.level) });
+    if (Math.random() < 0.15) {
+      const pool = DROP_TABLES.material;
+      drops.push({ itemId: pool[Math.floor(Math.random() * pool.length)], count: 1 + Math.floor(Math.random() * 2), quality: 0 });
+    }
+    if (Math.random() < 0.08) {
+      const pool = m.level >= 30 ? DROP_TABLES.weapon : DROP_TABLES.armor;
+      const levelTier = Math.min(Math.floor(m.level / 10), pool.length - 1);
+      drops.push({ itemId: pool[levelTier], count: 1, quality: rollQuality(m.level) });
+    }
+    if (Math.random() < 0.05 && m.level >= 20) {
+      const pool = DROP_TABLES.accessory;
+      drops.push({ itemId: pool[Math.floor(Math.random() * pool.length)], count: 1, quality: rollQuality(m.level) });
     }
   }
   return drops;
