@@ -15,6 +15,16 @@ const { createHttpHandler } = require('./http-api');
 const { readFrames } = require('./packet');
 const { handlePacket } = require('./handlers');
 
+// Load game protobuf definitions (extends proto.js)
+require('./proto-game');
+
+// Load game systems
+const inventory = require('./systems/inventory');
+const guild = require('./systems/guild');
+const campaign = require('./systems/campaign');
+const mail = require('./systems/mail');
+const friend = require('./systems/friend');
+
 // ─── Configuration ───────────────────────
 const PORT = parseInt(process.env.PORT, 10) || 8899;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -30,7 +40,14 @@ const config = {
 // ─── Initialize Database ─────────────────
 console.log('[DB] Initializing database...');
 db.init();
-console.log('[DB] Database ready.');
+
+// Initialize game system tables
+inventory.initDB();
+guild.initDB();
+campaign.initDB();
+mail.initDB();
+friend.initDB();
+console.log('[DB] Database ready (all systems).');
 
 // ─── Create HTTP Server ──────────────────
 const httpHandler = createHttpHandler(config);
@@ -39,8 +56,10 @@ const server = http.createServer(httpHandler);
 // ─── Create WebSocket Server ─────────────
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-// Track all connected clients
+// Track all connected clients (shared with handlers and systems)
 const clients = new Map(); // charId → ws
+// Make clients accessible to handlers
+global.__clients = clients;
 
 wss.on('connection', (ws, req) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -90,20 +109,22 @@ wss.on('connection', (ws, req) => {
 // ─── Start Server ────────────────────────
 server.listen(PORT, HOST, () => {
   console.log('');
-  console.log('╔══════════════════════════════════════════╗');
-  console.log('║     Wartune Ultra Server v1.0.0          ║');
-  console.log('╠══════════════════════════════════════════╣');
-  console.log(`║  HTTP + WS : ${HOST}:${PORT}                ║`);
-  console.log(`║  Public    : ${PUBLIC_HOST}:${PORT}          ║`);
-  console.log('║  Database  : SQLite (data/wartune.db)    ║');
-  console.log('╚══════════════════════════════════════════╝');
+  console.log('╔══════════════════════════════════════════════╗');
+  console.log('║       Wartune Ultra Server v1.1.0            ║');
+  console.log('╠══════════════════════════════════════════════╣');
+  console.log(`║  HTTP + WS : ${HOST}:${PORT}                    ║`);
+  console.log(`║  Public    : ${PUBLIC_HOST}:${PORT}              ║`);
+  console.log('║  Database  : SQLite (data/wartune.db)        ║');
+  console.log('║  Systems   : Login, Chat, Battle, Inventory  ║');
+  console.log('║             Guild, Campaign, Mail, Friends   ║');
+  console.log('║             Shop, VIP                        ║');
+  console.log('╚══════════════════════════════════════════════╝');
   console.log('');
 });
 
 // ─── Graceful Shutdown ───────────────────
 process.on('SIGINT', () => {
   console.log('\n[SERVER] Shutting down...');
-  // Set all characters offline
   try {
     const dbInst = db.getDatabase();
     dbInst.prepare('UPDATE characters SET is_online = 0').run();
