@@ -202,26 +202,42 @@ function sellItem(charId, itemDbId, count = 1) {
 /**
  * Recalculate character stats from equipped items
  */
-function recalcStats(charId) {
-  const equipped = getEquippedItems(charId);
-  let bonusAtk = 0, bonusDef = 0, bonusHp = 0, bonusMAtk = 0, bonusMDef = 0;
+const BASE_STATS = {
+  1: { hp: 500, attack: 30, defence: 25, magicAttack: 10, magicDefence: 15 },
+  2: { hp: 350, attack: 10, defence: 15, magicAttack: 35, magicDefence: 20 },
+  3: { hp: 400, attack: 35, defence: 18, magicAttack: 8, magicDefence: 12 },
+};
+const STAT_GROWTH = {
+  1: { hp: 80, attack: 8, defence: 5, magicAttack: 3, magicDefence: 3 },
+  2: { hp: 50, attack: 3, defence: 3, magicAttack: 10, magicDefence: 5 },
+  3: { hp: 60, attack: 10, defence: 4, magicAttack: 2, magicDefence: 3 },
+};
 
+function recalcStats(charId) {
+  const char = db.getCharacterById(charId);
+  if (!char) return;
+
+  const job = char.job || char.camp || 1;
+  const base = BASE_STATS[job] || BASE_STATS[1];
+  const growth = STAT_GROWTH[job] || STAT_GROWTH[1];
+  const level = char.grade || 1;
+
+  let totalHp = base.hp + growth.hp * (level - 1);
+  let totalAtk = base.attack + growth.attack * (level - 1);
+  let totalDef = base.defence + growth.defence * (level - 1);
+  let totalMAtk = base.magicAttack + growth.magicAttack * (level - 1);
+  let totalMDef = base.magicDefence + growth.magicDefence * (level - 1);
+
+  const equipped = getEquippedItems(charId);
   for (const item of equipped) {
     const attrs = JSON.parse(item.attrs || '{}');
-    bonusAtk  += (attrs.attack || 0) + item.enhance * 5;
-    bonusDef  += (attrs.defence || 0) + item.enhance * 3;
-    bonusHp   += (attrs.hp || 0) + item.enhance * 20;
-    bonusMAtk += (attrs.magicAttack || 0) + item.enhance * 4;
-    bonusMDef += (attrs.magicDefence || 0) + item.enhance * 2;
+    totalAtk  += (attrs.attack || 0) + item.enhance * 5;
+    totalDef  += (attrs.defence || 0) + item.enhance * 3;
+    totalHp   += (attrs.hp || 0) + item.enhance * 20;
+    totalMAtk += (attrs.magicAttack || 0) + item.enhance * 4;
+    totalMDef += (attrs.magicDefence || 0) + item.enhance * 2;
   }
 
-  // Base stats + equipment bonus
-  const baseAtk = 100, baseDef = 50, baseHp = 5000, baseMAtk = 80, baseMDef = 40;
-  const totalAtk = baseAtk + bonusAtk;
-  const totalDef = baseDef + bonusDef;
-  const totalHp = baseHp + bonusHp;
-  const totalMAtk = baseMAtk + bonusMAtk;
-  const totalMDef = baseMDef + bonusMDef;
   const fighting = totalAtk + totalDef + totalHp / 10 + totalMAtk + totalMDef;
 
   db.updateCharacter(charId, {
@@ -286,14 +302,34 @@ function getItemSellPrice(itemId, quality) {
  * Give starter items to a new character
  */
 function giveStarterItems(charId, job) {
-  // Starter weapon based on job
-  const weapons = { 0: 1001, 1: 1001, 2: 1002, 3: 1003, 4: 1004 };
-  const weaponId = weapons[job] || 1001;
+  const weapons = {
+    1: { id: 1001, attrs: { attack: 25, hp: 50 } },
+    2: { id: 1002, attrs: { magicAttack: 30, hp: 30 } },
+    3: { id: 1003, attrs: { attack: 28, hp: 40 } },
+  };
+  const weapon = weapons[job] || weapons[1];
 
-  addItem(charId, weaponId, 1, QUALITY.WHITE);     // Starter weapon
-  addItem(charId, 2001, 1, QUALITY.WHITE);          // Starter armor
-  addItem(charId, 100001, 10, QUALITY.WHITE);       // HP potions x10
-  addItem(charId, 100002, 5, QUALITY.WHITE);        // MP potions x5
+  const w = addItem(charId, weapon.id, 1, QUALITY.GREEN, 0);
+  if (w) {
+    db.getDatabase().prepare('UPDATE items SET attrs = ?, equip_slot = ? WHERE id = ?')
+      .run(JSON.stringify(weapon.attrs), EQUIP_SLOT.WEAPON, w.id);
+  }
+
+  const armors = {
+    1: { id: 2001, attrs: { defence: 20, hp: 100 } },
+    2: { id: 2002, attrs: { magicDefence: 25, hp: 60 } },
+    3: { id: 2003, attrs: { defence: 15, hp: 80 } },
+  };
+  const armor = armors[job] || armors[1];
+  const a = addItem(charId, armor.id, 1, QUALITY.GREEN, 0);
+  if (a) {
+    db.getDatabase().prepare('UPDATE items SET attrs = ?, equip_slot = ? WHERE id = ?')
+      .run(JSON.stringify(armor.attrs), EQUIP_SLOT.ARMOR, a.id);
+  }
+
+  addItem(charId, 100001, 20, QUALITY.WHITE);
+  addItem(charId, 100002, 10, QUALITY.WHITE);
+  addItem(charId, 100003, 5, QUALITY.WHITE);
 }
 
 module.exports = {

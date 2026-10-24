@@ -578,6 +578,9 @@ function endBattle(battleId, won) {
         grade: newLevel,
         hp: char.max_hp,
       });
+      if (newLevel > char.grade) {
+        require('./inventory').recalcStats(battle.player.charId);
+      }
 
       const loot = generateDrops(battle.monsters, char.grade);
       drops.push(...loot);

@@ -106,12 +106,12 @@ function isAccountBanned(id) {
 }
 
 // ─── Character queries ───────────────────────────
-function createCharacter(accountId, nickName, sex, camp, icon, site = 's1') {
+function createCharacter(accountId, nickName, sex, camp, icon, site = 's1', job = 0) {
   const stmt = db.prepare(`
-    INSERT INTO characters (account_id, nick_name, sex, camp, icon, site)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO characters (account_id, nick_name, sex, camp, icon, site, job)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
-  return stmt.run(accountId, nickName, sex, camp, icon, site);
+  return stmt.run(accountId, nickName, sex, camp, icon, site, job);
 }
 
 function getCharactersByAccount(accountId) {

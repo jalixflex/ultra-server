@@ -224,8 +224,21 @@ HANDLERS[C.L_REGISTER_ROLE] = (ws, body, pkt, cfg) => {
     return;
   }
 
-  const result = db.createCharacter(account.id, nickName, sex || 1, camp || 1, icon || 0, site || 's1');
+  const job = camp || 1;
+  const result = db.createCharacter(account.id, nickName, sex || 1, camp || 1, icon || 0, site || 's1', job);
   const charId = result.lastInsertRowid;
+
+  // Give starter equipment and items
+  try { inventory.giveStarterItems(charId, job); } catch(e) { console.error('[REGISTER] starter items error:', e.message); }
+
+  // Give starter skills
+  try { skills.giveStarterSkills(charId, job); } catch(e) { console.error('[REGISTER] starter skills error:', e.message); }
+
+  // Initialize tutorial
+  try { tutorial.onFirstLogin(charId); } catch(e) { console.error('[REGISTER] tutorial error:', e.message); }
+
+  // Recalc stats with equipment
+  try { inventory.recalcStats(charId); } catch(e) { console.error('[REGISTER] recalc error:', e.message); }
 
   const gateKey = randomKey();
   if (ws.session) {
@@ -473,6 +486,9 @@ HANDLERS[C.BAG_EQUIP] = (ws, body) => {
     const req = JSON.parse(body.toString());
     const result = inventory.equipItem(cid, req.itemDbId, req.slot);
     sendJson(ws, S.BAG_UPDATE, result);
+    if (result.success) {
+      try { quest.updateProgress(cid, 'equip_item', 'any'); } catch(e) {}
+    }
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 

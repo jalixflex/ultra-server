@@ -307,11 +307,11 @@ function checkLevelUp(charId) {
   const char = db.getCharacterById(charId);
   if (!char) return;
   const expNeeded = Math.floor(100 * char.grade * char.grade * 0.8);
-  if (char.exp >= expNeeded && char.grade < 80) {
+  if (char.exp >= expNeeded && char.grade < 100) {
     const newLevel = char.grade + 1;
     db.getDatabase().prepare('UPDATE characters SET grade = ?, exp = exp - ? WHERE id = ?')
       .run(newLevel, expNeeded, charId);
-    // Recursive check for multi-level ups
+    require('./inventory').recalcStats(charId);
     checkLevelUp(charId);
   }
 }

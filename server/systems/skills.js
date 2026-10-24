@@ -148,8 +148,20 @@ function recalcPassives(charId) {
   db.setPlayerData(charId, 'skill_bonuses', bonuses);
 }
 
+function giveStarterSkills(charId, job) {
+  const classId = job || 1;
+  const templates = CLASS_SKILLS[classId] || CLASS_SKILLS[1];
+  const starters = templates.filter(s => s.type === 'active').slice(0, 2);
+  for (let i = 0; i < starters.length; i++) {
+    db.getDatabase()
+      .prepare('INSERT OR IGNORE INTO skills (char_id, skill_id, level, equipped, slot) VALUES (?, ?, 1, 1, ?)')
+      .run(charId, starters[i].id, i);
+  }
+  recalcPassives(charId);
+}
+
 module.exports = {
   OPCODES, CLASS_SKILLS, MAX_EQUIPPED,
   initDB,
-  getSkills, learnOrUpgrade, equipSkill, recalcPassives,
+  getSkills, learnOrUpgrade, equipSkill, recalcPassives, giveStarterSkills,
 };
