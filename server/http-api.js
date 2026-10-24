@@ -38,6 +38,20 @@ function randomKey() {
   return crypto.randomBytes(8).toString('hex');
 }
 
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password, stored) {
+  if (!stored.includes(':')) return password === stored; // legacy plaintext
+  const [salt, hash] = stored.split(':');
+  const derived = crypto.scryptSync(password, salt, 64).toString('hex');
+  return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(derived, 'hex'));
+}
+
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -90,7 +104,7 @@ function createHttpHandler(config) {
           return jsonResponse(res, 400, { ok: false, error: 'Bu kullanici adi zaten alinmis' });
         }
 
-        db.createAccount(username, password);
+        db.createAccount(username, hashPassword(password));
         return jsonResponse(res, 200, { ok: true });
       }
 
@@ -100,7 +114,7 @@ function createHttpHandler(config) {
         const { username, password } = JSON.parse(raw.toString());
 
         const account = db.getAccount(username);
-        if (!account || account.password !== password) {
+        if (!account || !verifyPassword(password, account.password)) {
           return jsonResponse(res, 401, { ok: false, error: 'Kullanici adi veya sifre hatali' });
         }
         if (account.banned === 1) {
