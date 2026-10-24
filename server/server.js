@@ -74,7 +74,7 @@ const archaeology = require('./systems/archaeology');
 const crossServer = require('./systems/cross-server');
 const tutorial = require('./systems/tutorial');
 const giftCode = require('./systems/gift-code');
-const title = require('./systems/title');
+const titles = require('./systems/titles');
 
 // ─── Configuration ───────────────────────
 const PORT = parseInt(process.env.PORT, 10) || 8899;
@@ -146,7 +146,7 @@ archaeology.initDB();
 crossServer.initDB();
 tutorial.initDB();
 giftCode.initDB();
-title.initDB();
+titles.initDB();
 console.log('[DB] Database ready (60 systems).');
 
 // ─── Create HTTP Server ──────────────────
