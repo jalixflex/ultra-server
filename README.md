@@ -2,7 +2,13 @@
 
 Wartune Ultra HTML5 MMORPG oyununun tam sunucu implementasyonu. Node.js, WebSocket, SQLite ve Protobuf tabanlı. 14GB HTML5 client ile uyumlu çalışır.
 
-**17,000+ satır kod | 58 oyun sistemi | 418 opcode | Tek port (8899)**
+**20,000+ satır kod | 60+ oyun sistemi | 420+ opcode | Tek port (8899)**
+
+> **DURUM: ÖZELLİK TAMAMLANDI — CLIENT VERİ ENTEGRASYONU BEKLENİYOR**
+>
+> Tüm oyun mekanikleri ve sistemler implement edildi. Placeholder veriler (item ID'ler, quest
+> zincirleri, monster statları, skill verileri, proto formatları) 14GB HTML5 client'tan
+> çıkarılıp değiştirilmeli. Bir sonraki AI oturumu bu görevi yapacak.
 
 ## Mimari
 
@@ -17,12 +23,14 @@ Wartune Ultra HTML5 MMORPG oyununun tam sunucu implementasyonu. Node.js, WebSock
 │              Node.js Server                      │
 │  ┌──────────┐ ┌──────────┐ ┌──────────────────┐ │
 │  │ HTTP API │ │ WS Frame │ │  Packet Handler  │ │
-│  │ register │ │ decrypt  │ │  2241 lines      │ │
+│  │ register │ │ decrypt  │ │  2400+ lines     │ │
 │  │ login    │ │ parse    │ │  route → systems │ │
-│  └──────────┘ └──────────┘ └──────────────────┘ │
+│  │ GM tools │ └──────────┘ └──────────────────┘ │
+│  └──────────┘                                    │
 │  ┌──────────────────────────────────────────────┐│
-│  │           58 Game Systems (12400+ lines)     ││
-│  │  battle, inventory, guild, quest, city ...   ││
+│  │         60+ Game Systems (15000+ lines)      ││
+│  │  battle, inventory, guild, quest, city,      ││
+│  │  sylph, party, title, daily-login, ...       ││
 │  └──────────────────────────────────────────────┘│
 │  ┌──────────┐ ┌──────────┐ ┌──────────────────┐ │
 │  │  SQLite  │ │ Protobuf │ │  CFB-XOR Crypto  │ │
@@ -47,6 +55,7 @@ Sunucu `0.0.0.0:8899` portunda başlar (HTTP + WebSocket aynı port).
 | `HOST` | `0.0.0.0` | Bind adresi |
 | `PUBLIC_HOST` | `127.0.0.1` | Client'a gönderilen public IP |
 | `WEBROOT` | `webroot_web/` | Statik dosya dizini |
+| `GM_TOKEN` | — | GM API Bearer token (zorunlu) |
 
 ## Protokol
 
@@ -82,24 +91,29 @@ Client                          Server
   │◄── S_QUEST_LIST ──────────────  Aktif görevler
   │◄── S_TUTORIAL_INFO ───────────  Tutorial durumu
   │◄── Feature unlock flags ──────  Açık özellikler
+  │◄── S_MAIL_LIST ───────────────  Postalar
+  │◄── S_DAILY_LOGIN_INFO ────────  Günlük giriş durumu
+  │◄── S_TITLE_LIST ──────────────  Unvan listesi
 ```
 
-## 58 Oyun Sistemi
+---
+
+## 60+ Oyun Sistemi
 
 ### Core
 | Sistem | Dosya | Açıklama |
 |--------|-------|----------|
 | Login | `handlers.js` | Giriş, karakter seçim, gateway |
 | Chat | `chat.js` | Dünya/özel/lonca sohbet |
-| Battle | `battle.js` | Sıra tabanlı savaş, rage, skill, troop |
-| Inventory | `inventory.js` | Çanta, equip, satış |
+| Battle | `battle.js` | Sıra tabanlı savaş, rage, skill, troop, sylph dönüşüm |
+| Inventory | `inventory.js` | Çanta, equip, satış, stat hesaplama |
 | Shop | `shop.js` | Mağaza kataloğu |
 | VIP | `vip.js` | VIP seviyeleri ve bonusları |
 
 ### Karakter Gelişimi
 | Sistem | Dosya | Açıklama |
 |--------|-------|----------|
-| Skills | `skills.js` | Sınıf becerileri, upgrade |
+| Skills | `skills.js` | Sınıf becerileri, upgrade, starter skills |
 | Talent | `talent.js` | Yetenek ağacı (lv50+) |
 | Rune | `rune.js` | Rün sistemi (lv35+) |
 | Wings | `wings.js` | Kanat gelişimi |
@@ -111,6 +125,7 @@ Client                          Server
 | Class Advance | `class-advance.js` | Sınıf ilerleme (lv80+) |
 | Clothing | `clothing.js` | Kostüm sistemi |
 | Buff | `buff.js` | Buff/debuff yönetimi |
+| **Title** | **`title.js`** | **15 unvan, stat bonusları, seviye/başarım bazlı** |
 
 ### Sosyal
 | Sistem | Dosya | Açıklama |
@@ -119,19 +134,19 @@ Client                          Server
 | Guild Extras | `guild-extras.js` | Lonca savaşı/altar/canavar |
 | Mail | `mail.js` | Posta sistemi |
 | Friend | `friend.js` | Arkadaş listesi |
-| Party | `party.js` | Grup/MPD (lv18+) |
+| **Party** | **`party.js`** | **Grup/MPD co-op, 10 dungeon, 3 zorluk** |
 | Social | `social.js` | Profil, hediye, blok |
 
 ### Görev & Dünya
 | Sistem | Dosya | Açıklama |
 |--------|-------|----------|
-| Quest | `quest.js` | Ana görev zinciri (27 görev) |
+| Quest | `quest.js` | Ana görev zinciri (63 görev, lv1-80) |
 | Bounty | `bounty.js` | Ödül panosu (lv17+) |
 | Devotion | `devotion.js` | Günlük görevler |
 | Circuit Quest | `circuit-quest.js` | Devre görevleri |
-| Campaign | `campaign.js` | 6 bölüm, 23 stage |
-| World Boss | `world-boss.js` | Dünya bossları (lv20+) |
-| Catacombs | `catacombs.js` | Yeraltı mezarları (lv23+) |
+| Campaign | `campaign.js` | 8 bölüm, 38+ stage, **blitz** |
+| World Boss | `world-boss.js` | 10 dünya bossu (lv20-80) |
+| Catacombs | `catacombs.js` | 100 kat, 20 isimli boss (lv23+) |
 | World Map | `world-map.js` | 7 harita bölgesi |
 | Tutorial | `tutorial.js` | 9 adımlık yeni oyuncu rehberi |
 | Feature Unlock | `feature-unlock.js` | Seviye bazlı özellik açma |
@@ -149,7 +164,7 @@ Client                          Server
 | Sistem | Dosya | Açıklama |
 |--------|-------|----------|
 | Astral | `astral.js` | Astral yakalama (lv25+) |
-| Sylph | `sylph.js` | Sylph sistemi |
+| **Sylph** | **`sylph.js`** | **9+9 sylph, yıldız, uyanış, evrim, engulf** |
 | Mount | `mount.js` | Binek sistemi |
 | Troops | `troops.js` | Birlik sistemi |
 | Eudaemon | `eudaemon.js` | Eudaemon (lv70+) |
@@ -169,13 +184,81 @@ Client                          Server
 ### Ekonomi & Etkinlik
 | Sistem | Dosya | Açıklama |
 |--------|-------|----------|
-| City | `city.js` | 10 şehir binası |
+| City | `city.js` | 10 bina, **yapım timer'ı, VIP hızlandırma** |
 | Farm | `farm.js` | Çiftlik (lv11+) |
-| Daily Login | `daily-login.js` | Günlük giriş ödülleri |
+| **Daily Login** | **`daily-login.js`** | **30 günlük takvim, streak, premium ödüller** |
 | Events | `events.js` | Etkinlik sistemi |
+| **Hot Events** | **`hot-events.js`** | **Dönemsel sıcak etkinlikler** |
 | Gacha | `gacha.js` | Şans çarkı |
 | Jewel Hunt | `jewel-hunt.js` | Mücevher avı |
 | Achievement | `achievement.js` | Başarım sistemi |
+| **Gift Code** | **`gift-code.js`** | **Hediye kodu sistemi** |
+
+---
+
+## Son Eklenen Özellikler (v7.0)
+
+### Günlük Giriş Ödülleri (`daily-login.js`)
+- 30 günlük ödül takvimi, aylık reset
+- Streak takibi (7/14/21/28/30. gün premium ödüller)
+- Gold, EXP, item, balen ödülleri
+
+### Hediye Kodu Sistemi (`gift-code.js`)
+- Tek/çoklu kullanımlık kodlar, süre sınırlı
+- Seed kodlar: `WELCOME2024`, `WARTUNE`, `ULTRA`
+- GM API ile yeni kod oluşturma
+
+### Blitz/Otomatik Savaş (`campaign.js`)
+- `blitzStage(charId, stageId, count)` — Tamamlanmış stage'leri anında tekrar
+- Ödül çarpanı, envantere otomatik item ekleme
+
+### Oyuncu İnceleme (`handlers.js`)
+- 0x9903 → 0x9904 opcode: Başka oyuncuların profilini görme
+- Stat, ekipman, unvan, sylph bilgisi
+
+### Bina Yapım Timer'ı (`city.js`)
+- `upgradeBuilding()` → timer bazlı (anlık değil)
+- `checkBuildComplete()` → otomatik bitirme kontrolü
+- `speedUpBuild()` → balen ile anında tamamlama
+- VIP seviyesi başına %5 süre azaltma
+
+### Unvan Sistemi (`title.js`)
+- 15 unvan: seviye bazlı (lv10-80) + başarım bazlı (arena, boss, guild vb.)
+- Aktif unvan stat bonusu (recalcStats entegrasyonu)
+- Unvan listesi/equip handler'ları
+
+### GM Araçları (`http-api.js`)
+- 12 GM API endpoint (Bearer token auth)
+- `/api/gm/announce` — Sunucu duyurusu
+- `/api/gm/give-item`, `/api/gm/give-currency` — Item/para verme
+- `/api/gm/ban`, `/api/gm/kick` — Oyuncu yönetimi
+- `/api/gm/set-level`, `/api/gm/player/:charId` — Bilgi/düzenleme
+- `/api/gm/create-gift-code` — Hediye kodu oluşturma
+
+### Sıcak Etkinlikler (`hot-events.js`)
+- Dönemsel etkinlik sistemi, zaman bazlı
+
+### Sylph Tam Sistem (`sylph.js` + `battle.js`)
+- **9 Temel Sylph**: Gaia, Amazon Queen, Pan, Hades, Iris, Poseidon, Thor, Apollo, Nyx
+- **9 Evrimli Sylph**: Storm Gaia, Tempest Queen, Inferno Pan, Shadow Hades, vb.
+- **6 Element**: Wind, Fire, Water, Electro, Dark, Light
+- **Yıldız Yükseltme**: 0-10 yıldız, azalan başarı şansı
+- **Uyanış**: Lv40+ ve 5+ yıldız gerekli, element bazlı uyanış becerileri
+- **Evrim**: Lv60+ ve uyanmış olmalı, evrimli template'e dönüşüm
+- **Engulf**: Bir sylph'i diğerine feda ederek EXP kazandırma
+- **Savaşta Dönüşüm**: 100 rage ile sylph'e dönüş, 3 tur boyunca
+  - Oyuncu becerileri element bazlı sylph becerileriyle değişir
+  - Stat boost: sylph template + yıldız + uyanış + seviye
+  - Element avantajı: Fire>Wind>Water>Fire, Light↔Dark (1.3x/0.7x)
+  - Manuel geri dönüş veya 3 tur sonra otomatik revert
+
+### Parti/MPD Co-op Sistemi (`party.js`)
+- In-memory parti yönetimi (oluştur, davet et, kabul et, ayrıl, at)
+- 10 multiplayer dungeon (lv18-75), 3 zorluk (Normal/Nightmare/Hell)
+- Kombine parti statları + sylph assist bonusları ile boss savaşı
+- Üye başı drop ödülleri
+
+---
 
 ## Savaş Sistemi
 
@@ -184,6 +267,9 @@ Client                          Server
 - **3 Sınıf**: Knight / Mage / Archer (6 skill)
 - **7 Birlik Tipi**: Lancier, Gryphon, Angel, Templar, Warlock, Archer, Paladin
 - **Buff/Debuff**: Stun, Shield, Dodge, Taunt, DoT
+- **Sylph Dönüşümü**: 100 rage, 3 tur, element bazlı beceriler
+- **VIP Çarpanı**: EXP ve gold bonus
+- **Drop Tabloları**: Consumable, weapon, armor, accessory, material
 
 ## Karakter Para Birimleri
 
@@ -191,38 +277,36 @@ Client                          Server
 |------|----------|-----------|
 | `gold` | Altın | 10,000 |
 | `bound_gold` | Bağlı Altın | 0 |
-| `balens` | Elmas 💎 | 1,000 |
-| `bound_balens` | Bağlı Elmas 🔒 | 500 |
+| `balens` | Elmas | 1,000 |
+| `bound_balens` | Bağlı Elmas | 500 |
 
 ## Web Sayfaları
 
 - `/` — Ana sayfa (Wartune Ultra tasarımı, ŞİMDİ OYNA butonu)
 - `/login.html` — Giriş/Kayıt sayfası (API entegrasyonu)
 
-## Client Entegrasyonu Notları
+---
 
-Bu sunucu 14GB HTML5 Wartune Ultra client'ı ile çalışacak şekilde tasarlanmıştır. Client Laya Engine tabanlıdır ve tüm UI'ı kendi render eder. Sunucu doğru formatta veri gönderir.
+## CLIENT VERİ ENTEGRASYONU TALİMATLARI
 
-### Client Bağlantı Noktaları
-1. Client `/clientsiteinfoservlet` endpoint'inden sunucu listesini alır (deflate JSON)
-2. WebSocket bağlantısı `/ws` path'ine yapılır
-3. İlk paket `U_L_PREPARE` (0x0F02) ile login key gönderilir
-4. `G_LOGIN_GATEWAY` (0x4E21) ile oyuna girilir
-5. Sunucu karakter bilgisi + sistem verilerini push eder
+> **BU BÖLÜM SONRAKİ AI OTURUMU İÇİNDİR**
+>
+> Bu sunucu özellik olarak tamamlanmıştır. Tüm oyun mekanikleri çalışır durumda.
+> Ancak placeholder veriler kullanılmaktadır. 14GB HTML5 client'tan gerçek verilerin
+> çıkarılıp sunucuya aktarılması gerekir. Client tüm UI'ı render eder — sunucu
+> yalnızca doğru formatta veri gönderir.
 
-### Mevcut Protobuf Mesajları
-- `LoginReqMsg`, `LoginRspMsg`, `PlayerMsg` — Login akışı
-- `ChatMsg` — Sohbet
-- `BattleStartMsg`, `BattleRoundMsg` — Savaş
-- `BagInfoMsg` — Envanter
-- `SimpleResultMsg` — Genel sonuç
-- `SynchronizedTimeMsg` — Zaman senkronizasyonu
+### Öncelik Sırası
 
-### Client'tan Çıkarılması Gereken Veriler
+1. **Protobuf Şemaları** (EN KRİTİK — bu olmadan client hiçbir paketi anlamaz)
+2. **Opcode Eşleştirme** (client'ın gerçek opcode'ları ile sunucununkiler eşleşmeli)
+3. **Item Template Verileri** (envanter, shop, drop sistemi hepsi buna bağlı)
+4. **Quest Verileri** (görev zinciri, NPC diyalogları)
+5. **Monster/Campaign Verileri** (savaş sistemi)
+6. **Skill Verileri** (sınıf becerileri)
+7. **Shop/Map/Zone Verileri** (diğer sistemler)
 
-**ÖNEMLİ**: Aşağıdaki verilerin hepsi 14GB HTML5 client'ın içinde zaten mevcuttur. Client tüm görev metinlerini, item isimlerini, canavar statlarını, NPC diyaloglarını, harita verilerini ve protobuf şemalarını barındırır. Sunucunun bu verileri yeniden yaratmasına gerek yok — client dosyalarından çıkarılıp sunucuya aktarılmalıdır.
-
-#### Client Dosya Yapısı (İncelenmesi Gereken Yerler)
+### Client Dosya Yapısı (İncelenmesi Gereken Yerler)
 
 ```
 webroot_web/                    ← Client kök dizini
@@ -262,7 +346,7 @@ webroot_web/                    ← Client kök dizini
     └── net/                    ← Network/opcode tanımları
 ```
 
-#### Çıkarma Adımları (Claude İçin Talimatlar)
+### Çıkarma Adımları (Sonraki AI Oturumu İçin)
 
 **1. Protobuf Şemaları** (EN KRİTİK)
 ```bash
@@ -271,89 +355,178 @@ find webroot_web/ -name "*.proto" -o -name "proto.bin" -o -name "protobuf*"
 # Veya JS kaynaklarında protobuf mesaj tanımlarını bul
 grep -r "protobuf.Type\|proto.define\|addField\|ProtoBuf.newBuilder" webroot_web/src/
 ```
-Bu .proto tanımlarını `server/proto.js` ve `server/proto-game.js` dosyalarına ekle. Şu an 11 encode çağrısı protobuf kullanıyor, 216 çağrı JSON. Client gerçek protobuf bekliyor — JSON paketleri sessizce görmezden geliniyor.
+Bu .proto tanımlarını `server/proto.js` ve `server/proto-game.js` dosyalarına ekle. Şu an 11 encode çağrısı protobuf kullanıyor, 200+ çağrı JSON. Client gerçek protobuf bekliyor — JSON paketleri sessizce görmezden geliniyor.
 
-**2. Item Template Verileri**
+**Sunucuda değiştirilmesi gereken dosyalar:**
+- `server/proto.js` — Ana protobuf tanımları (LoginReqMsg, PlayerMsg, BagInfoMsg vb.)
+- `server/proto-game.js` — Genişletilmiş proto tanımları
+- Her `sendJson()` çağrısı → `encode()` ile değiştirilmeli
+
+**2. Opcode Eşleştirme**
 ```bash
-# Config dizininde item tanımlarını bul
-find webroot_web/ -name "*item*" -o -name "*equip*" -o -name "*Item*"
-# JSON/XML item veritabanını oku ve server/data/items.json oluştur
+# Client'ın opcode tanımlarını bul
+grep -r "0x0F\|0x10\|CMD_\|OPCODE\|cmdId\|PacketId" webroot_web/src/ --include="*.js"
 ```
-Her item ID için: isim, ikon atlas ID, tip (weapon/armor/ring/accessory/consumable/material/gem), slot, base statlar (attack/defence/hp/magic_attack/magic_defence), seviye gereksinimi, sınıf gereksinimi (knight/mage/archer), kalite/rarity, satış fiyatı, set ID (varsa).
+`server/opcodes.js` dosyasındaki 420+ opcode'u client'ınkilerle karşılaştır. Eşleşmeyen opcode'lar client tarafında sessizce görmezden gelinir.
 
-**3. Quest Verileri**
+**3. Item Template Verileri**
 ```bash
-# Görev tanımlarını bul
+find webroot_web/ -name "*item*" -o -name "*equip*" -o -name "*Item*"
+```
+Her item ID için: isim, tip (weapon/armor/ring/accessory/consumable/material/gem), slot, base statlar, seviye/sınıf gereksinimi, kalite, satış fiyatı, set ID.
+
+**Sunucuda değiştirilmesi gereken yerler:**
+- `server/systems/inventory.js` → `giveStarterItems()` placeholder item ID'ler (1001-2003, 100001-100003)
+- `server/systems/inventory.js` → `isStackable()` sadece ID >= 100000 kontrol ediyor
+- `server/systems/battle.js` → `generateDrops()` placeholder drop tabloları
+- `server/systems/shop.js` → Mağaza kataloğu
+- `server/systems/gacha.js` → Gacha ödül havuzu
+
+**4. Quest Verileri**
+```bash
 find webroot_web/ -name "*quest*" -o -name "*Quest*" -o -name "*mission*"
 ```
-Her quest ID için: isim, açıklama, tip (main/side/daily/class), ön koşul quest ID, hedefler (kill monster X adet, collect item Y, talk to NPC Z, complete dungeon), ödüller (exp, gold, items), NPC diyalog zincirleri, seviye gereksinimi.
+**Sunucuda:** `server/systems/quest.js` → 63 placeholder quest. Her biri `type`, `targetId`, `targetCount`, `rewards` ile tanımlı. Client'taki gerçek quest ID, hedef ve ödüllerle değiştirilmeli.
 
-**4. Monster Verileri**
+**5. Monster/Campaign Verileri**
 ```bash
-find webroot_web/ -name "*monster*" -o -name "*Monster*" -o -name "*mob*"
+find webroot_web/ -name "*monster*" -o -name "*campaign*" -o -name "*stage*"
 ```
-Her monster ID için: isim, seviye, HP, ATK, DEF, MATK, MDEF, element, drop tablosu (item ID + drop oranı), XP ödülü, gold ödülü, boss flag, spawn bölgesi.
-
-**5. Campaign/Dungeon Stage Verileri**
-```bash
-find webroot_web/ -name "*campaign*" -o -name "*Campaign*" -o -name "*stage*" -o -name "*dungeon*"
-```
-Her stage için: bölüm, sıra, canavar listesi (ID + adet), boss ID, ödüller, yıldız koşulları, Elite/Nightmare varyantları.
+**Sunucuda:**
+- `server/systems/battle.js` → `startBattle()` placeholder monster statları
+- `server/systems/campaign.js` → 8 bölüm, 38 stage placeholder verilerle
+- `server/systems/world-boss.js` → 10 boss placeholder statlarla
+- `server/systems/catacombs.js` → 100 kat, 20 boss placeholder
 
 **6. Skill Verileri**
 ```bash
 find webroot_web/ -name "*skill*" -o -name "*Skill*"
 ```
-Her skill ID için: isim, sınıf (knight/mage/archer), seviye, hasar çarpanı, rage maliyeti, cooldown, AOE flag, efekt tipi (stun/dot/shield/heal), açılma seviyesi.
+**Sunucuda:**
+- `server/systems/skills.js` → Sınıf becerileri placeholder ID ve damage ile
+- `server/systems/battle.js` → `getClassSkills()` placeholder skill listesi
+- `server/systems/sylph.js` → Sylph becerileri placeholder
 
-**7. Shop Verileri**
+**7. Sylph Verileri**
 ```bash
-find webroot_web/ -name "*shop*" -o -name "*Shop*" -o -name "*store*"
+find webroot_web/ -name "*sylph*" -o -name "*peri*" -o -name "*fairy*"
 ```
-Mağaza sekmeleri, her sekmedeki item ID listesi, fiyatlar (gold/balens/bound_balens), stok limitleri, VIP gereksinimleri.
+**Sunucuda:** `server/systems/sylph.js` → 9 base + 9 evolved template, placeholder statlar ve beceriler. Client'taki gerçek sylph ID, stat ve becerileriyle değiştirilmeli.
 
-**8. Map/Zone Verileri**
-```bash
-find webroot_web/ -name "*map*" -o -name "*Map*" -o -name "*scene*"
+### Mevcut Placeholder Veri Örnekleri (Değiştirilecekler)
+
+```javascript
+// inventory.js — starter weapon placeholder
+const weapons = {
+  1: { id: 1001, attrs: { attack: 25, hp: 50 } },   // Knight weapon
+  2: { id: 1002, attrs: { magicAttack: 30, hp: 30 } }, // Mage weapon
+  3: { id: 1003, attrs: { attack: 28, hp: 40 } },   // Archer weapon
+};
+
+// battle.js — drop table placeholder
+const DROP_TABLES = {
+  consumable: [
+    { itemId: 100001, chance: 0.3, min: 1, max: 3 },
+    { itemId: 100002, chance: 0.2, min: 1, max: 2 },
+    // ...
+  ],
+};
+
+// quest.js — quest placeholder
+{ id: 1, name: 'İlk Adım', type: 'talk_npc', targetId: 1001, targetCount: 1,
+  level: 1, rewards: { exp: 100, gold: 50 }, nextQuest: 2 },
+
+// sylph.js — sylph template placeholder
+{ id: 1, name: 'Gaia', element: 'WIND', baseHp: 2000, baseAtk: 150, ... },
 ```
-Zone ID, isim, seviye aralığı, canavar spawn noktaları, NPC konumları, portal/geçiş noktaları.
 
-**9. Opcode Eşleştirme**
-```bash
-# Client'ın opcode tanımlarını bul
-grep -r "0x0F\|0x10\|CMD_\|OPCODE\|cmdId\|PacketId" webroot_web/src/ --include="*.js"
+### Sunucu Mimarisi Notları (Sonraki AI İçin)
+
+- Her sistem dosyası `'use strict'` ile başlar, `require('../db')` kullanır
+- `OPCODES` const ile tanımlı, `initDB()` ile tablo oluşturur, `module.exports` ile dışa aktarır
+- `handlers.js` merkezi router — opcode'a göre doğru sisteme yönlendirir
+- `server.js` tüm sistemleri yükler ve `initDB()` çağırır
+- Protobuf namespace: `com.road.yishi.proto.*`
+- Şifre hashleme: `crypto.pbkdf2Sync` + salt (geriye uyumlu)
+- Parti sistemi in-memory (Map), restart'ta sıfırlanır
+- Battle ID'ler in-memory Map, kalıcı değil
+
+### Sistemler Arası Entegrasyon Haritası
+
 ```
-Client'ın kullandığı gerçek opcode'ları sunucunun opcodes.js dosyasıyla karşılaştır.
+Battle Win → quest.updateProgress('kill_monster')
+           → achievement.incrementStat('battles_won', 'monsters_killed')
+           → ranking.updatePlayerRanking()
+           → inventory.addItem() (drops)
 
-### Tamamlanması Gereken Kod Düzeltmeleri
+Level Up   → quest.checkLevelUp() (recursive)
+           → inventory.recalcStats()
+           → title.checkNewTitles()
+           → ranking.updatePlayerRanking()
+
+Equip Item → inventory.recalcStats()
+           → quest.updateProgress('equip_item')
+
+Guild Join → quest.updateProgress('guild_join')
+           → achievement.incrementStat('guild_join')
+
+Arena Win  → quest.updateProgress('arena_win')
+           → achievement.incrementStat('arena_wins')
+           → ranking.updatePlayerRanking()
+
+Sylph Transform (in battle) → stat boost from sylph template
+                             → element-based skill replacement
+                             → element advantage multiplier
+```
+
+---
+
+## Tamamlanan Özellikler Listesi
+
+### v6.0 — Temel Entegrasyonlar
+- [x] Seviye bazlı stat büyümesi (Knight/Mage/Archer ayrı base+growth)
+- [x] Karakter oluşturma: job, giveStarterItems, giveStarterSkills, recalcStats
+- [x] Battle ↔ Skills entegrasyonu (skill seviye multiplier)
+- [x] Quest progress tetikleyicileri (kill, equip, arena, guild, troop, forge, city, campaign)
+- [x] Feature unlock gating (Arena 13, Guild 12, Gacha 10, Astral 25, Forge 10)
+- [x] Achievement tetikleyicileri (battle, arena, guild)
+- [x] Ranking otomatik güncelleme
+- [x] VIP bonus entegrasyonu (EXP/gold çarpanı)
+- [x] Gacha item ödülleri (inventory entegrasyonu)
+- [x] Drop sistemi (5 kategori drop tablosu)
+- [x] Level cap tutarlılığı (100)
+
+### v7.0 — Yeni Sistemler
+- [x] Günlük giriş ödülleri takvimi (30 gün, streak)
+- [x] Hediye kodu sistemi (tek/çoklu kullanım, süreli)
+- [x] Blitz/otomatik savaş (tamamlanmış stage tekrarı)
+- [x] Oyuncu inceleme (profil görüntüleme)
+- [x] Bina yapım timer'ı + VIP hızlandırma + balen ile anında tamamlama
+- [x] Unvan sistemi (15 unvan, stat bonus, recalcStats entegrasyonu)
+- [x] GM araçları (12 endpoint, Bearer token auth)
+- [x] Sıcak etkinlikler sistemi
+- [x] Sylph yıldız yükseltme (0-10, azalan şans)
+- [x] Sylph uyanış (lv40+ ve 5+ yıldız)
+- [x] Sylph evrim (lv60+ ve uyanmış)
+- [x] Sylph engulf (feda ile EXP)
+- [x] Sylph savaşta dönüşüm (100 rage, 3 tur, element beceriler)
+- [x] Element avantajı sistemi (Fire>Wind>Water, Light↔Dark)
+- [x] Parti/MPD co-op sistemi (10 dungeon, 3 zorluk)
+- [x] Sunucu duyuru sistemi (broadcast)
 
 ### Client Verisine Bağımlı (14GB client'tan çıkarılmalı)
-- [ ] **Protobuf tanımları**: Client .proto dosyalarından çıkarılıp `proto.js`/`proto-game.js`'e eklenmeli (216 sendJson → encode dönüşümü)
-- [ ] **Item template sistemi**: Client item verilerinden `server/data/items.json` oluşturulmalı, inventory.js bu tabloyu kullanmalı
-- [ ] **Quest içeriği**: Client quest verilerinden 200+ görev quest.js'e aktarılmalı
-- [ ] **Campaign stages**: Client campaign verilerinden 80+ stage campaign.js'e aktarılmalı
-- [ ] **Monster templates**: Client monster verilerinden 500+ canavar battle.js'e aktarılmalı
-- [ ] **Shop kataloğu**: Client shop verilerinden 100+ item shop.js'e aktarılmalı
-- [ ] **Map zones**: Client harita verilerinden 15+ zone world-map.js'e aktarılmalı
-- [ ] **Skill verileri**: Client skill verilerinden sınıf becerileri skills.js'e aktarılmalı
-- [ ] **Equipment set bonusları**: Set parçaları birlikte bonus vermeli
+- [ ] Protobuf tanımları (200+ sendJson → encode dönüşümü)
+- [ ] Item template sistemi (gerçek item ID'ler ve statlar)
+- [ ] Quest içeriği (gerçek görev zincirleri ve ödüller)
+- [ ] Campaign stages (gerçek monster listeleri ve haritalar)
+- [ ] Monster templates (gerçek canavar statları)
+- [ ] Shop kataloğu (gerçek item listesi ve fiyatlar)
+- [ ] Map zones (gerçek harita verileri)
+- [ ] Skill verileri (gerçek sınıf becerileri)
+- [ ] Equipment set bonusları
+- [ ] Sylph gerçek template verileri
 
-### Tamamlanan Özellikler (v6.0)
-- [x] **Seviye bazlı stat büyümesi**: `inventory.js recalcStats` — sınıf+seviye bazlı base/growth tablosu (Knight/Mage/Archer)
-- [x] **Karakter oluşturma**: `handlers.js` — job parametresi, `giveStarterItems()`, `giveStarterSkills()`, `recalcStats()` çağrılıyor
-- [x] **Battle ↔ Skills entegrasyonu**: `battle.js startBattle` — öğrenilen skill seviyeleri multiplier'ları artırıyor
-- [x] **Quest progress tetikleyicileri**: Kill monster, equip item, arena, guild join tetikliyor
-- [x] **Feature unlock gating**: Arena(13), Guild(12), Gacha(10), Astral(25), Forge(10) seviye kontrolü
-- [x] **Achievement tetikleyicileri**: Battle gold_total, arena_wins, guild_join incrementStat çağrıları
-- [x] **Ranking otomatik güncelleme**: `inventory.recalcStats` ve `battle.endBattle` → `ranking.updatePlayerRanking()`
-- [x] **VIP bonus entegrasyonu**: `battle.js endBattle` — VIP exp/gold çarpanı uygulanıyor
-- [x] **Gacha item ödülleri**: `gacha.js pull` — item ödüller `inventory.addItem()` ile veriliyor, string→numeric ID map
-- [x] **Drop sistemi**: `battle.js generateDrops` — düzgün item tabloları (consumable/weapon/armor/accessory/material)
-- [x] **Battle class mapping düzeltmesi**: `getClassSkills` job 1=Knight, 2=Mage, 3=Archer olarak düzeltildi
-- [x] **Level cap tutarlılığı**: quest.js ve battle.js aynı cap (100)
-
-### Kalan Kod Düzeltmeleri
-- [ ] **Şifre hashleme**: Düz metin yerine bcrypt/argon2 kullanılmalı
+---
 
 ## Dosya Yapısı
 
@@ -362,50 +535,49 @@ wartune-server/
 ├── package.json
 ├── README.md
 ├── server/
-│   ├── server.js          — Ana giriş (248 satır)
-│   ├── handlers.js        — Paket yönlendirme (2241 satır)
-│   ├── opcodes.js         — 418 opcode (677 satır)
-│   ├── db.js              — SQLite veritabanı (190 satır)
-│   ├── packet.js          — Binary paket (115 satır)
-│   ├── crypto.js          — CFB-XOR şifreleme (42 satır)
-│   ├── proto.js           — Protobuf tanımları (225 satır)
-│   ├── proto-game.js      — Genişletilmiş proto (123 satır)
-│   ├── http-api.js        — HTTP API (206 satır)
-│   └── systems/           — 58 oyun sistemi (12400+ satır)
-│       ├── academy.js     ├── farm.js
-│       ├── achievement.js ├── feature-unlock.js
-│       ├── archaeology.js ├── forge.js
-│       ├── arena.js       ├── friend.js
-│       ├── astral.js      ├── gacha.js
-│       ├── battle.js      ├── gem.js
-│       ├── battleground.js├── guild-extras.js
-│       ├── bounty.js      ├── guild.js
-│       ├── buff.js        ├── henna.js
-│       ├── campaign.js    ├── holy-forge.js
-│       ├── catacombs.js   ├── honor.js
-│       ├── chat.js        ├── inventory.js
-│       ├── circuit-quest.js├── jewel-hunt.js
-│       ├── city.js        ├── knighthood.js
-│       ├── class-advance.js├── mail.js
-│       ├── clothing.js    ├── mount.js
-│       ├── cloud-adventure.js├── party.js
-│       ├── cross-server.js├── purgatory-maze.js
-│       ├── daily-login.js ├── quest.js
-│       ├── devotion.js    ├── ranking.js
-│       ├── dimensional-war.js├── resistance.js
-│       ├── dragon-soul.js ├── rune.js
-│       ├── eudaemon.js    ├── shop.js
-│       ├── events.js      ├── skills.js
-│       │                  ├── social.js
-│       │                  ├── spire.js
-│       │                  ├── sylph.js
-│       │                  ├── talent.js
-│       │                  ├── troops.js
-│       │                  ├── tutorial.js
-│       │                  ├── vip.js
-│       │                  ├── wings.js
-│       │                  ├── world-boss.js
-│       │                  └── world-map.js
+│   ├── server.js          — Ana giriş, 60+ sistem yükleme
+│   ├── handlers.js        — Paket yönlendirme (2400+ satır)
+│   ├── opcodes.js         — 420+ opcode
+│   ├── db.js              — SQLite veritabanı
+│   ├── packet.js          — Binary paket oluşturma
+│   ├── crypto.js          — CFB-XOR şifreleme
+│   ├── proto.js           — Protobuf tanımları
+│   ├── proto-game.js      — Genişletilmiş proto
+│   ├── http-api.js        — HTTP API + 12 GM endpoint
+│   └── systems/           — 60+ oyun sistemi
+│       ├── academy.js        ├── gacha.js
+│       ├── achievement.js    ├── gem.js
+│       ├── archaeology.js    ├── gift-code.js      ★ YENİ
+│       ├── arena.js          ├── guild-extras.js
+│       ├── astral.js         ├── guild.js
+│       ├── battle.js         ├── henna.js
+│       ├── battleground.js   ├── holy-forge.js
+│       ├── bounty.js         ├── honor.js
+│       ├── buff.js           ├── hot-events.js     ★ YENİ
+│       ├── campaign.js       ├── inventory.js
+│       ├── catacombs.js      ├── jewel-hunt.js
+│       ├── chat.js           ├── knighthood.js
+│       ├── circuit-quest.js  ├── mail.js
+│       ├── city.js           ├── mount.js
+│       ├── class-advance.js  ├── party.js          ★ GÜNCELLENDİ
+│       ├── clothing.js       ├── purgatory-maze.js
+│       ├── cloud-adventure.js├── quest.js
+│       ├── cross-server.js   ├── ranking.js
+│       ├── daily-login.js ★  ├── resistance.js
+│       ├── devotion.js       ├── rune.js
+│       ├── dimensional-war.js├── shop.js
+│       ├── dragon-soul.js    ├── skills.js
+│       ├── eudaemon.js       ├── social.js
+│       ├── events.js         ├── spire.js
+│       ├── farm.js           ├── sylph.js          ★ GÜNCELLENDİ
+│       ├── feature-unlock.js ├── talent.js
+│       ├── forge.js          ├── title.js          ★ YENİ
+│       ├── friend.js         ├── troops.js
+│       │                     ├── tutorial.js
+│       │                     ├── vip.js
+│       │                     ├── wings.js
+│       │                     ├── world-boss.js
+│       │                     └── world-map.js
 ├── webroot_web/
 │   ├── index.html         — Ana sayfa
 │   └── login.html         — Giriş/Kayıt sayfası
