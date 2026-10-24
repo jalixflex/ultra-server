@@ -160,10 +160,194 @@ const QUEST_CHAIN = [
     dialog: 'The ancient Sylphs will lend you their power. Choose your first elemental companion!',
     rewards: { exp: 30000, gold: 20000 }, nextQuest: 27 },
 
-  { id: 27, name: 'Class Advancement', type: 'main', npc: 'brad', minLevel: 80,
+  // === LEVELS 25-35 ===
+  { id: 27, name: 'Rune Gücü', type: 'main', npc: 'stone', minLevel: 25,
+    objective: 'equip_rune', target: 'any', count: 1,
+    dialog: 'Rune stones can amplify your power. Equip your first rune!',
+    rewards: { exp: 8000, gold: 9000 }, nextQuest: 28 },
+
+  { id: 28, name: 'Derinliklerde', type: 'main', npc: 'berdim', minLevel: 26,
+    objective: 'catacombs_floor', target: '10', count: 1,
+    dialog: 'The Catacombs grow darker. Reach floor 10 and defeat Lawrence the Wretched!',
+    rewards: { exp: 9000, gold: 10000 }, nextQuest: 29 },
+
+  { id: 29, name: 'Arena Şampiyonu', type: 'main', npc: 'elise', minLevel: 28,
+    objective: 'arena_battle', target: 'any', count: 10,
+    dialog: 'True champions fight in the Arena! Complete 10 arena battles.',
+    rewards: { exp: 10000, gold: 12000, items: [{ itemId: 3003, count: 1 }] }, nextQuest: 30 },
+
+  { id: 30, name: 'Lonca Bağışı', type: 'main', npc: 'berdim', minLevel: 28,
+    objective: 'guild_donate', target: 'any', count: 3,
+    dialog: 'A strong guild needs resources. Donate 3 times to your guild treasury!',
+    rewards: { exp: 8000, gold: 8000 }, nextQuest: 31 },
+
+  { id: 31, name: 'Yetenek Ağacı', type: 'main', npc: 'berdim', minLevel: 30,
+    objective: 'learn_talent', target: 'any', count: 3,
+    dialog: 'Invest in your talent tree. Unlock 3 talent nodes.',
+    rewards: { exp: 12000, gold: 15000 }, nextQuest: 32 },
+
+  { id: 32, name: 'Forgotten Tomb', type: 'main', npc: 'berdim', minLevel: 30,
+    objective: 'complete_campaign', target: 'forgotten_tomb', count: 1,
+    dialog: 'The Forgotten Tomb holds dark secrets. Clear it and uncover the truth.',
+    rewards: { exp: 14000, gold: 16000 }, nextQuest: 33 },
+
+  { id: 33, name: 'Forge Ustası', type: 'main', npc: 'stone', minLevel: 32,
+    objective: 'enchant_item', target: 'any', count: 5,
+    dialog: 'Master the art of enchanting! Enchant items 5 times.',
+    rewards: { exp: 13000, gold: 14000 }, nextQuest: 34 },
+
+  { id: 34, name: 'Mücevher Koleksiyoncusu', type: 'main', npc: 'stone', minLevel: 33,
+    objective: 'socket_gem', target: 'any', count: 3,
+    dialog: 'Socket 3 gems into your equipment to enhance your power.',
+    rewards: { exp: 14000, gold: 15000 }, nextQuest: 35 },
+
+  { id: 35, name: 'Gölgeler Vadisi', type: 'main', npc: 'berdim', minLevel: 35,
+    objective: 'complete_campaign', target: 'shadow_valley', count: 1,
+    dialog: 'The Shadow Valley harbors creatures of darkness. Push through and cleanse it!',
+    rewards: { exp: 18000, gold: 20000 }, nextQuest: 36 },
+
+  // === LEVELS 35-45 ===
+  { id: 36, name: 'Dünya Bossu Avcısı', type: 'main', npc: 'berdim', minLevel: 35,
+    objective: 'world_boss', target: 'any', count: 5,
+    dialog: 'The World Boss threatens our world. Attack it 5 times!',
+    rewards: { exp: 20000, gold: 22000 }, nextQuest: 37 },
+
+  { id: 37, name: 'Kanat Uyanışı', type: 'main', npc: 'berdim', minLevel: 36,
+    objective: 'equip_wings', target: 'any', count: 1,
+    dialog: 'Your wings are ready to unfurl. Equip them and soar above your enemies!',
+    rewards: { exp: 18000, gold: 15000 }, nextQuest: 38 },
+
+  { id: 38, name: 'Birlik Gücü', type: 'main', npc: 'berdim', minLevel: 37,
+    objective: 'recruit_troop', target: 'any', count: 200,
+    dialog: 'Build a mighty army! Recruit 200 troops for the battles ahead.',
+    rewards: { exp: 20000, gold: 25000 }, nextQuest: 39 },
+
+  { id: 39, name: 'Demir Kalesi', type: 'main', npc: 'berdim', minLevel: 38,
+    objective: 'complete_campaign', target: 'iron_fortress', count: 1,
+    dialog: 'The Iron Fortress stands between us and victory. Storm its gates!',
+    rewards: { exp: 22000, gold: 25000 }, nextQuest: 40 },
+
+  { id: 40, name: 'Astral Ustası', type: 'main', npc: 'berdim', minLevel: 40,
+    objective: 'capture_astral', target: 'any', count: 5,
+    dialog: 'Master the power of the stars. Capture 5 Astrals from the observatory!',
+    rewards: { exp: 25000, gold: 30000, items: [{ itemId: 3005, count: 2 }] }, nextQuest: 41 },
+
+  { id: 41, name: 'Katakomplar Derinliği', type: 'main', npc: 'berdim', minLevel: 40,
+    objective: 'catacombs_floor', target: '20', count: 1,
+    dialog: 'Descend to floor 20 of the Catacombs and defeat the Shadow Assassin!',
+    rewards: { exp: 26000, gold: 28000 }, nextQuest: 42 },
+
+  { id: 42, name: 'Savaş Alanı Gazisi', type: 'main', npc: 'elise', minLevel: 42,
+    objective: 'battleground', target: 'any', count: 5,
+    dialog: 'Participate in 5 Battleground matches. Win or lose, experience is the reward.',
+    rewards: { exp: 28000, gold: 30000 }, nextQuest: 43 },
+
+  { id: 43, name: 'Kara Orman', type: 'main', npc: 'berdim', minLevel: 43,
+    objective: 'complete_campaign', target: 'dark_forest', count: 1,
+    dialog: 'The Dark Forest conceals ancient evils. Clear a path through its heart.',
+    rewards: { exp: 30000, gold: 32000 }, nextQuest: 44 },
+
+  { id: 44, name: 'Ejderha Ruhu', type: 'main', npc: 'berdim', minLevel: 45,
+    objective: 'equip_dragon_soul', target: 'any', count: 1,
+    dialog: 'The Dragon Soul will grant you immense power. Activate it now!',
+    rewards: { exp: 32000, gold: 35000 }, nextQuest: 45 },
+
+  // === LEVELS 45-60 ===
+  { id: 45, name: 'Cehennem Kapısı', type: 'main', npc: 'berdim', minLevel: 47,
+    objective: 'complete_campaign', target: 'hell_gate', count: 1,
+    dialog: 'The gates of Hell have opened. Enter and survive the infernal trials!',
+    rewards: { exp: 35000, gold: 38000 }, nextQuest: 46 },
+
+  { id: 46, name: 'Sylph Eğitimi', type: 'main', npc: 'sylph_npc', minLevel: 50,
+    objective: 'upgrade_sylph', target: 'any', count: 3,
+    dialog: 'Your Sylph needs training! Upgrade it 3 times to unlock its true potential.',
+    rewards: { exp: 40000, gold: 40000 }, nextQuest: 47 },
+
+  { id: 47, name: 'Kutsal Dövme', type: 'main', npc: 'berdim', minLevel: 52,
+    objective: 'apply_henna', target: 'any', count: 3,
+    dialog: 'Sacred tattoos grant hidden power. Apply 3 henna tattoos.',
+    rewards: { exp: 42000, gold: 42000 }, nextQuest: 48 },
+
+  { id: 48, name: 'Buz Tapınağı', type: 'main', npc: 'berdim', minLevel: 53,
+    objective: 'complete_campaign', target: 'ice_temple', count: 1,
+    dialog: 'The Ice Temple freezes all who enter unprepared. Shatter its guardian!',
+    rewards: { exp: 45000, gold: 48000 }, nextQuest: 49 },
+
+  { id: 49, name: 'Eudaemon Çağrısı', type: 'main', npc: 'berdim', minLevel: 55,
+    objective: 'summon_eudaemon', target: 'any', count: 1,
+    dialog: 'Summon your Eudaemon, a divine companion to fight alongside you!',
+    rewards: { exp: 50000, gold: 50000 }, nextQuest: 50 },
+
+  { id: 50, name: 'Katakomplar 50', type: 'main', npc: 'berdim', minLevel: 55,
+    objective: 'catacombs_floor', target: '50', count: 1,
+    dialog: 'Descend to floor 50 and defeat Demon Lord Krath!',
+    rewards: { exp: 55000, gold: 55000, items: [{ itemId: 3008, count: 1, quality: 4 }] }, nextQuest: 51 },
+
+  { id: 51, name: 'Cross-Server Arena', type: 'main', npc: 'elise', minLevel: 57,
+    objective: 'cross_server_battle', target: 'any', count: 1,
+    dialog: 'You are ready for the ultimate challenge. Enter the Cross-Server Arena!',
+    rewards: { exp: 55000, gold: 60000 }, nextQuest: 52 },
+
+  { id: 52, name: 'Volkanik Geçit', type: 'main', npc: 'berdim', minLevel: 58,
+    objective: 'complete_campaign', target: 'volcanic_pass', count: 1,
+    dialog: 'The Volcanic Pass is ablaze with fire elementals. Survive the heat!',
+    rewards: { exp: 60000, gold: 60000 }, nextQuest: 53 },
+
+  // === LEVELS 60-80 ===
+  { id: 53, name: 'Boyut Savaşı', type: 'main', npc: 'berdim', minLevel: 60,
+    objective: 'dimensional_war', target: 'any', count: 1,
+    dialog: 'Dimensional rifts tear through our world. Join the Dimensional War!',
+    rewards: { exp: 70000, gold: 70000 }, nextQuest: 54 },
+
+  { id: 54, name: 'Antik Rune', type: 'main', npc: 'stone', minLevel: 62,
+    objective: 'upgrade_rune', target: 'any', count: 5,
+    dialog: 'Upgrade 5 runes to amplify their ancient power.',
+    rewards: { exp: 72000, gold: 70000 }, nextQuest: 55 },
+
+  { id: 55, name: 'Şövalye Loncası', type: 'main', npc: 'brad', minLevel: 63,
+    objective: 'knighthood_quest', target: 'any', count: 1,
+    dialog: 'The Knighthood calls. Prove your valor and join their ranks!',
+    rewards: { exp: 75000, gold: 75000 }, nextQuest: 56 },
+
+  { id: 56, name: 'Lanetli Kale', type: 'main', npc: 'berdim', minLevel: 65,
+    objective: 'complete_campaign', target: 'cursed_castle', count: 1,
+    dialog: 'The Cursed Castle radiates dark energy. Destroy the source of the curse!',
+    rewards: { exp: 80000, gold: 80000 }, nextQuest: 57 },
+
+  { id: 57, name: 'Sylph Uyanışı', type: 'main', npc: 'sylph_npc', minLevel: 67,
+    objective: 'upgrade_sylph', target: 'any', count: 10,
+    dialog: 'Awaken your Sylph to its ultimate form. Upgrade it 10 times!',
+    rewards: { exp: 85000, gold: 85000, items: [{ itemId: 3010, count: 1, quality: 5 }] }, nextQuest: 58 },
+
+  { id: 58, name: 'Arena Efsanesi', type: 'main', npc: 'elise', minLevel: 68,
+    objective: 'arena_battle', target: 'any', count: 50,
+    dialog: 'Win 50 arena battles to earn the title of Arena Legend!',
+    rewards: { exp: 88000, gold: 90000 }, nextQuest: 59 },
+
+  { id: 59, name: 'Katakomplar 80', type: 'main', npc: 'berdim', minLevel: 70,
+    objective: 'catacombs_floor', target: '80', count: 1,
+    dialog: 'Floor 80 holds the Chaos Emperor. Only the mightiest can reach it!',
+    rewards: { exp: 90000, gold: 95000 }, nextQuest: 60 },
+
+  { id: 60, name: 'Tanrıların Savaşı', type: 'main', npc: 'berdim', minLevel: 72,
+    objective: 'complete_campaign', target: 'gods_battlefield', count: 1,
+    dialog: 'The Gods\' Battlefield awaits. Enter and face divine trials!',
+    rewards: { exp: 95000, gold: 100000 }, nextQuest: 61 },
+
+  { id: 61, name: 'Ejderha Efendisi', type: 'main', npc: 'berdim', minLevel: 74,
+    objective: 'upgrade_dragon_soul', target: 'any', count: 10,
+    dialog: 'Feed your Dragon Soul 10 times. It hungers for power!',
+    rewards: { exp: 100000, gold: 100000 }, nextQuest: 62 },
+
+  { id: 62, name: 'Son Sınav', type: 'main', npc: 'berdim', minLevel: 76,
+    objective: 'catacombs_floor', target: '100', count: 1,
+    dialog: 'The 100th floor of the Catacombs is the ultimate test. Defeat the Abyssal Overlord!',
+    rewards: { exp: 120000, gold: 120000, balens: 500 }, nextQuest: 63 },
+
+  { id: 63, name: 'Class Advancement', type: 'main', npc: 'brad', minLevel: 80,
     objective: 'class_advance', target: 'any', count: 1,
     dialog: 'You have proven yourself worthy. Complete the trials to advance your class!',
-    rewards: { exp: 100000, gold: 50000 }, nextQuest: null },
+    rewards: { exp: 150000, gold: 100000, balens: 1000 }, nextQuest: null },
 ];
 
 function initDB() {
