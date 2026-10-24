@@ -70,6 +70,7 @@ const archaeology = require('./systems/archaeology');
 const crossServer = require('./systems/cross-server');
 const tutorial = require('./systems/tutorial');
 const featureUnlock = require('./systems/feature-unlock');
+const titles = require('./systems/titles');
 const giftCode = require('./systems/gift-code');
 
 /**
@@ -2345,6 +2346,35 @@ HANDLERS[0x9A00] = (ws, body) => {
     const result = giftCode.redeemCode(cid, req.code || '');
     sendJson(ws, 0x9A10, result);
   } catch (e) { sendSimpleResult(ws, false, 'Code error'); }
+};
+
+// ─── Titles ─────────────────────────────────
+HANDLERS[C.TITLE_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const list = titles.getTitles(cid);
+  sendJson(ws, S.TITLE_LIST_RSP, { titles: list });
+};
+
+HANDLERS[C.EQUIP_TITLE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = titles.equipTitle(cid, req.titleId);
+    sendJson(ws, S.EQUIP_TITLE_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── City Speed Up ──────────────────────────
+HANDLERS[C.CITY_SPEED_UP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = city.speedUpBuild(cid, req.buildingId);
+    sendJson(ws, S.CITY_SPEED_UP_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
 module.exports = { handlePacket, sendPacket };
