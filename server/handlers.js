@@ -11,6 +11,27 @@ const { encode, decode } = require('./proto');
 const db = require('./db');
 const crypto = require('crypto');
 
+// Game systems
+const chat = require('./systems/chat');
+const inventory = require('./systems/inventory');
+const battle = require('./systems/battle');
+const guild = require('./systems/guild');
+const campaign = require('./systems/campaign');
+const mail = require('./systems/mail');
+const friend = require('./systems/friend');
+const shop = require('./systems/shop');
+const vip = require('./systems/vip');
+const astral = require('./systems/astral');
+const sylph = require('./systems/sylph');
+const mount = require('./systems/mount');
+const troops = require('./systems/troops');
+const arena = require('./systems/arena');
+const farm = require('./systems/farm');
+const academy = require('./systems/academy');
+const skills = require('./systems/skills');
+const wings = require('./systems/wings');
+const forge = require('./systems/forge');
+
 /**
  * Per-connection state stored on the ws object:
  *   ws.session = { accountId, username, loginKey, charId, site, gateKey }
@@ -317,6 +338,591 @@ HANDLERS[C.L_SYNC_TIME] = (ws) => {
     sysMillisecond: now.getTime(),
   });
   sendPacket(ws, S.U_C_SYNCHRONIZED_TIME, body);
+};
+
+// ═══════════════════════════════════════════
+// Game System Handlers
+// ═══════════════════════════════════════════
+
+function sendSimpleResult(ws, success, msg) {
+  const body = encode('com.road.yishi.proto.simple.SimpleResultMsg', {
+    result: success ? 0 : -1,
+    msg: msg || '',
+  });
+  sendPacket(ws, S.SIMPLE_RESULT, body);
+}
+
+function sendJson(ws, cmdId, data) {
+  const body = Buffer.from(JSON.stringify(data));
+  sendPacket(ws, cmdId, body);
+}
+
+function charId(ws) {
+  return ws.session && ws.session.charId;
+}
+
+// ─── Chat ───────────────────────────────────
+HANDLERS[C.CHAT_SEND] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const char = db.getCharacterById(cid);
+    const msg = { sender: char.nick_name, senderId: cid, channel: req.channel || 'world', content: req.content, time: Date.now() };
+
+    if (req.channel === 'world' || !req.channel) {
+      chat.broadcast(msg);
+      const clients = global.__clients;
+      if (clients) {
+        for (const [, ws2] of clients) {
+          sendJson(ws2, S.CHAT_MSG, msg);
+        }
+      }
+    } else if (req.channel === 'private' && req.targetId) {
+      const target = global.__clients && global.__clients.get(req.targetId);
+      if (target) sendJson(target, S.CHAT_MSG, msg);
+      sendJson(ws, S.CHAT_MSG, msg);
+    }
+  } catch (e) { /* ignore malformed */ }
+};
+
+// ─── Inventory ──────────────────────────────
+HANDLERS[C.BAG_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const items = inventory.getItems(cid);
+  sendJson(ws, S.BAG_INFO_RSP, { items });
+};
+
+HANDLERS[C.BAG_EQUIP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = inventory.equipItem(cid, req.itemDbId, req.slot);
+    sendJson(ws, S.BAG_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.BAG_UNEQUIP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = inventory.unequipItem(cid, req.slot);
+    sendJson(ws, S.BAG_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.BAG_SELL] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = inventory.sellItem(cid, req.itemDbId);
+    sendJson(ws, S.BAG_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Battle / Campaign ──────────────────────
+HANDLERS[C.BATTLE_START] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = battle.startPvE(cid, req.monsterId || 1);
+    sendJson(ws, S.BATTLE_INIT, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Battle error'); }
+};
+
+HANDLERS[C.CAMPAIGN_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const stages = campaign.getStages(cid);
+  sendJson(ws, S.CAMPAIGN_LIST_RSP, { stages });
+};
+
+HANDLERS[C.CAMPAIGN_ENTER] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = campaign.enterStage(cid, req.stageId);
+    sendJson(ws, S.CAMPAIGN_RESULT, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Campaign error'); }
+};
+
+HANDLERS[C.CAMPAIGN_SWEEP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = campaign.sweep(cid, req.stageId, req.count || 1);
+    sendJson(ws, S.CAMPAIGN_RESULT, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Sweep error'); }
+};
+
+// ─── Guild ──────────────────────────────────
+HANDLERS[C.GUILD_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const info = guild.getGuildForPlayer(cid);
+  sendJson(ws, S.GUILD_INFO_RSP, info || { msg: 'No guild' });
+};
+
+HANDLERS[C.GUILD_CREATE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = guild.createGuild(cid, req.name);
+    sendJson(ws, S.GUILD_INFO_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.GUILD_JOIN] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = guild.joinGuild(cid, req.guildId);
+    sendSimpleResult(ws, result.success, result.msg);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.GUILD_LEAVE] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = guild.leaveGuild(cid);
+  sendSimpleResult(ws, result.success, result.msg);
+};
+
+HANDLERS[C.GUILD_LIST] = (ws) => {
+  const list = guild.listGuilds();
+  sendJson(ws, S.GUILD_LIST_RSP, { guilds: list });
+};
+
+HANDLERS[C.GUILD_DONATE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = guild.donate(cid, req.amount || 100);
+    sendSimpleResult(ws, result.success, result.msg);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Mail ───────────────────────────────────
+HANDLERS[C.MAIL_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const mails = mail.getMailList(cid);
+  sendJson(ws, S.MAIL_LIST_RSP, { mails });
+};
+
+HANDLERS[C.MAIL_SEND] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = mail.sendMail(cid, req.targetId, req.title, req.content, req.attachments);
+    sendSimpleResult(ws, result.success, result.msg);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.MAIL_COLLECT] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = mail.collectAttachments(cid, req.mailId);
+    sendSimpleResult(ws, result.success, result.msg);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.MAIL_DELETE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    mail.deleteMail(cid, req.mailId);
+    sendSimpleResult(ws, true);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Friends ────────────────────────────────
+HANDLERS[C.FRIEND_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const friends = friend.getFriends(cid);
+  sendJson(ws, S.FRIEND_LIST_RSP, { friends });
+};
+
+HANDLERS[C.FRIEND_ADD] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = friend.addFriend(cid, req.targetId);
+    sendSimpleResult(ws, result.success, result.msg);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.FRIEND_REMOVE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = friend.removeFriend(cid, req.targetId);
+    sendSimpleResult(ws, result.success, result.msg);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.FRIEND_SEARCH] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const results = friend.searchByNick(req.nickname);
+    sendJson(ws, S.FRIEND_LIST_RSP, { friends: results });
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Shop ───────────────────────────────────
+HANDLERS[C.SHOP_LIST] = (ws) => {
+  const catalog = shop.getCatalog();
+  sendJson(ws, S.SHOP_LIST_RSP, { items: catalog });
+};
+
+HANDLERS[C.SHOP_BUY] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = shop.buyItem(cid, req.itemId, req.count || 1);
+    sendSimpleResult(ws, result.success, result.msg);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── VIP ────────────────────────────────────
+HANDLERS[C.VIP_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const info = vip.getVipInfo(cid);
+  sendJson(ws, S.VIP_INFO_RSP, info);
+};
+
+// ─── Astral ─────────────────────────────────
+HANDLERS[C.ASTRAL_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const list = astral.getAstrals(cid);
+  sendJson(ws, S.ASTRAL_LIST_RSP, { astrals: list });
+};
+
+HANDLERS[C.ASTRAL_CAPTURE] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = astral.capture(cid);
+  sendJson(ws, S.ASTRAL_UPDATE, result);
+};
+
+HANDLERS[C.ASTRAL_UPGRADE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = astral.upgrade(cid, req.astralId, req.feedIds || []);
+    sendJson(ws, S.ASTRAL_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.ASTRAL_EQUIP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = astral.equip(cid, req.astralId, req.slot);
+    sendJson(ws, S.ASTRAL_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.ASTRAL_UNEQUIP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = astral.unequip(cid, req.slot);
+    sendJson(ws, S.ASTRAL_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Sylph ──────────────────────────────────
+HANDLERS[C.SYLPH_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const list = sylph.getSylphs(cid);
+  sendJson(ws, S.SYLPH_LIST_RSP, { sylphs: list });
+};
+
+HANDLERS[C.SYLPH_EQUIP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = sylph.equipSylph(cid, req.sylphId);
+    sendJson(ws, S.SYLPH_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.SYLPH_UPGRADE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = sylph.upgradeSylph(cid, req.sylphId);
+    sendJson(ws, S.SYLPH_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.SYLPH_ENGULF] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = sylph.engulf(cid, req.sylphId, req.feedId);
+    sendJson(ws, S.SYLPH_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Mount ──────────────────────────────────
+HANDLERS[C.MOUNT_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const list = mount.getMounts(cid);
+  sendJson(ws, S.MOUNT_LIST_RSP, { mounts: list });
+};
+
+HANDLERS[C.MOUNT_EQUIP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = mount.equipMount(cid, req.mountId);
+    sendJson(ws, S.MOUNT_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.MOUNT_UPGRADE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = mount.upgradeMount(cid, req.mountId);
+    sendJson(ws, S.MOUNT_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Troops ─────────────────────────────────
+HANDLERS[C.TROOP_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const list = troops.getTroops(cid);
+  sendJson(ws, S.TROOP_LIST_RSP, { troops: list });
+};
+
+HANDLERS[C.TROOP_RECRUIT] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = troops.recruitTroop(cid, req.typeId, req.count || 50);
+    sendJson(ws, S.TROOP_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.TROOP_UPGRADE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = troops.upgradeTroop(cid, req.typeId);
+    sendJson(ws, S.TROOP_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.TROOP_EQUIP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = troops.equipTroop(cid, req.troopId);
+    sendJson(ws, S.TROOP_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Arena ──────────────────────────────────
+HANDLERS[C.ARENA_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const info = arena.getArenaInfo(cid);
+  const opponents = arena.getOpponents(cid);
+  sendJson(ws, S.ARENA_INFO_RSP, { info, opponents });
+};
+
+HANDLERS[C.ARENA_CHALLENGE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = arena.challenge(cid, req.targetId);
+    sendJson(ws, S.ARENA_RESULT, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.ARENA_RANKING] = (ws) => {
+  const ranking = arena.getRanking();
+  sendJson(ws, S.ARENA_RANKING_RSP, { ranking });
+};
+
+// ─── Farm ───────────────────────────────────
+HANDLERS[C.FARM_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const plots = farm.getFarmInfo(cid);
+  sendJson(ws, S.FARM_INFO_RSP, { plots });
+};
+
+HANDLERS[C.FARM_PLANT] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = farm.plant(cid, req.plotIdx, req.seedId);
+    sendJson(ws, S.FARM_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.FARM_HARVEST] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = farm.harvest(cid, req.plotIdx);
+    sendJson(ws, S.FARM_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.FARM_STEAL] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = farm.steal(cid, req.targetId, req.plotIdx);
+    sendJson(ws, S.FARM_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Academy ────────────────────────────────
+HANDLERS[C.ACADEMY_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const techs = academy.getTechLevels(cid);
+  sendJson(ws, S.ACADEMY_LIST_RSP, { technologies: techs });
+};
+
+HANDLERS[C.ACADEMY_RESEARCH] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = academy.research(cid, req.techId);
+    sendJson(ws, S.ACADEMY_RESEARCH_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Skills ─────────────────────────────────
+HANDLERS[C.SKILL_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const list = skills.getSkills(cid);
+  sendJson(ws, S.SKILL_LIST_RSP, { skills: list });
+};
+
+HANDLERS[C.SKILL_UPGRADE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = skills.learnOrUpgrade(cid, req.skillId);
+    sendJson(ws, S.SKILL_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.SKILL_EQUIP] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = skills.equipSkill(cid, req.skillId, req.slot);
+    sendJson(ws, S.SKILL_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Wings ──────────────────────────────────
+HANDLERS[C.WINGS_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const info = wings.getWingsInfo(cid);
+  sendJson(ws, S.WINGS_INFO_RSP, info);
+};
+
+HANDLERS[C.WINGS_UPGRADE] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = wings.upgradeWings(cid);
+  sendJson(ws, S.WINGS_UPDATE, result);
+};
+
+// ─── Forge ──────────────────────────────────
+HANDLERS[C.FORGE_ENCHANT] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = forge.enchantItem(cid, req.itemDbId);
+    sendJson(ws, S.FORGE_RESULT, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.FORGE_SOCKET] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = forge.socketGem(cid, req.itemDbId, req.gemType, req.gemLevel);
+    sendJson(ws, S.FORGE_RESULT, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.FORGE_REFINE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = forge.refineItem(cid, req.itemDbId);
+    sendJson(ws, S.FORGE_RESULT, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.FORGE_SYNTHESIZE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = forge.synthesizeGems(cid, req.gemType, req.gemLevel);
+    sendJson(ws, S.FORGE_RESULT, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
 module.exports = { handlePacket, sendPacket };

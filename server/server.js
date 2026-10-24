@@ -24,6 +24,16 @@ const guild = require('./systems/guild');
 const campaign = require('./systems/campaign');
 const mail = require('./systems/mail');
 const friend = require('./systems/friend');
+const astral = require('./systems/astral');
+const sylph = require('./systems/sylph');
+const mount = require('./systems/mount');
+const troops = require('./systems/troops');
+const arena = require('./systems/arena');
+const farm = require('./systems/farm');
+const academy = require('./systems/academy');
+const skills = require('./systems/skills');
+const wings = require('./systems/wings');
+const forge = require('./systems/forge');
 
 // ─── Configuration ───────────────────────
 const PORT = parseInt(process.env.PORT, 10) || 8899;
@@ -47,6 +57,15 @@ guild.initDB();
 campaign.initDB();
 mail.initDB();
 friend.initDB();
+astral.initDB();
+sylph.initDB();
+mount.initDB();
+troops.initDB();
+arena.initDB();
+farm.initDB();
+academy.initDB();
+skills.initDB();
+wings.initDB();
 console.log('[DB] Database ready (all systems).');
 
 // ─── Create HTTP Server ──────────────────
@@ -110,14 +129,16 @@ wss.on('connection', (ws, req) => {
 server.listen(PORT, HOST, () => {
   console.log('');
   console.log('╔══════════════════════════════════════════════╗');
-  console.log('║       Wartune Ultra Server v1.1.0            ║');
+  console.log('║       Wartune Ultra Server v1.2.0            ║');
   console.log('╠══════════════════════════════════════════════╣');
   console.log(`║  HTTP + WS : ${HOST}:${PORT}                    ║`);
   console.log(`║  Public    : ${PUBLIC_HOST}:${PORT}              ║`);
   console.log('║  Database  : SQLite (data/wartune.db)        ║');
   console.log('║  Systems   : Login, Chat, Battle, Inventory  ║');
   console.log('║             Guild, Campaign, Mail, Friends   ║');
-  console.log('║             Shop, VIP                        ║');
+  console.log('║             Shop, VIP, Astral, Sylph, Mount  ║');
+  console.log('║             Troops, Arena, Farm, Academy     ║');
+  console.log('║             Skills, Wings, Forge             ║');
   console.log('╚══════════════════════════════════════════════╝');
   console.log('');
 });
