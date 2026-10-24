@@ -4,6 +4,7 @@ const { encode } = require('../proto');
 const { buildPacket } = require('../packet');
 const db = require('../db');
 const playerSkills = require('./skills');
+const sylphModule = require('./sylph');
 
 const OPCODES = {
   C_BATTLE_START:     0x1B58,
@@ -19,6 +20,10 @@ const OPCODES = {
   S_BATTLE_RAGE:      0x1025,
   S_BATTLE_TROOP_ACT: 0x1026,
   S_BATTLE_BUFF:      0x1027,
+  C_SYLPH_TRANSFORM:  0x3E90,
+  S_SYLPH_TRANSFORM_RSP: 0x10B0,
+  C_SYLPH_REVERT:     0x3E91,
+  S_SYLPH_REVERT_RSP: 0x10B1,
 };
 
 const STATE = { WAITING: 0, ACTIVE: 1, FINISHED: 2 };
@@ -32,6 +37,23 @@ const RAGE_PER_CRIT = 20;
 const RAGE_PER_KILL = 15;
 const RAGE_ON_DAMAGED = 5;
 const MAX_RAGE = 100;
+const SYLPH_TRANSFORM_DURATION = 3;
+const SYLPH_TRANSFORM_RAGE_COST = 100;
+
+const ELEMENT_ADVANTAGE = {
+  2: 1,  // Fire > Wind
+  1: 3,  // Wind > Water
+  3: 2,  // Water > Fire
+  6: 5,  // Light > Dark
+  5: 6,  // Dark > Light
+};
+
+function getElementMultiplier(attackerElement, defenderElement) {
+  if (!attackerElement || !defenderElement) return 1.0;
+  if (ELEMENT_ADVANTAGE[attackerElement] === defenderElement) return 1.3;
+  if (ELEMENT_ADVANTAGE[defenderElement] === attackerElement) return 0.7;
+  return 1.0;
+}
 
 // Skill definitions — 6 slots per class
 const CLASS_SKILLS = {
@@ -157,6 +179,11 @@ function startBattle(ws, monsterIds, campaignId = 0) {
   const cooldowns = {};
   for (const s of skills) cooldowns[s.id] = 0;
 
+  let sylphData = null;
+  try {
+    sylphData = sylphModule.getEquippedSylph(char.id);
+  } catch (e) { /* sylph module may not be ready */ }
+
   const battle = {
     id: battleId,
     state: STATE.ACTIVE,
@@ -180,6 +207,10 @@ function startBattle(ws, monsterIds, campaignId = 0) {
       cooldowns,
       buffs: [],
       selectedSkill: null,
+      sylph: sylphData,
+      sylphTransformed: false,
+      sylphTransformRounds: 0,
+      sylphElement: sylphData ? sylphData.element : 0,
     },
     troop: troopData ? {
       type: troopData.type || 'lancers',
@@ -344,6 +375,10 @@ function processRound(battleId) {
       }
 
       const dmg = calcSkillDamage(battle.player, target, usedSkill);
+      if (battle.player.sylphTransformed && battle.player.sylphElement) {
+        const elMul = getElementMultiplier(battle.player.sylphElement, target.element || 0);
+        dmg.total = Math.floor(dmg.total * elMul);
+      }
       const isCrit = dmg.crit;
       target.hp -= dmg.total;
 
@@ -489,6 +524,20 @@ function processRound(battleId) {
           targetHp: monster.hp, isCrit: false, isDot: true,
         });
       }
+    }
+  }
+
+  // Sylph transformation countdown
+  if (battle.player.sylphTransformed && battle.player.sylphTransformRounds > 0) {
+    battle.player.sylphTransformRounds--;
+    if (battle.player.sylphTransformRounds <= 0) {
+      doSylphRevert(battle);
+      actions.push({
+        attackerId: battle.player.charId, attackerType: 0,
+        targetId: battle.player.charId, targetType: 0,
+        damage: 0, skillId: 0, skillName: 'Sylph Revert',
+        targetHp: battle.player.hp, isCrit: false, isBuff: true, buffEffect: 'sylph_revert',
+      });
     }
   }
 
@@ -777,8 +826,135 @@ function getBattle(battleId) {
   return activeBattles.get(battleId);
 }
 
+// ─── Sylph Transformation ──────────────────────────────────
+const SYLPH_ELEMENT_SKILLS = {
+  fire:  [
+    { slot: 1, id: 'flame_bolt',    name: 'Flame Bolt',    type: 'magic', multiplier: 1.4, rageCost: 0,  cooldown: 0, aoe: false },
+    { slot: 2, id: 'inferno',       name: 'Inferno',       type: 'magic', multiplier: 1.8, rageCost: 20, cooldown: 2, aoe: true },
+    { slot: 3, id: 'fire_shield',   name: 'Fire Shield',   type: 'buff',  multiplier: 0,   rageCost: 15, cooldown: 3, aoe: false, effect: 'shield', duration: 2 },
+    { slot: 4, id: 'meteor_rain',   name: 'Meteor Rain',   type: 'magic', multiplier: 3.0, rageCost: 50, cooldown: 5, aoe: true },
+  ],
+  water: [
+    { slot: 1, id: 'ice_lance',     name: 'Ice Lance',     type: 'magic', multiplier: 1.3, rageCost: 0,  cooldown: 0, aoe: false },
+    { slot: 2, id: 'blizzard',      name: 'Blizzard',      type: 'magic', multiplier: 1.6, rageCost: 20, cooldown: 2, aoe: true, slow: 1 },
+    { slot: 3, id: 'frost_armor',   name: 'Frost Armor',   type: 'buff',  multiplier: 0,   rageCost: 15, cooldown: 3, aoe: false, effect: 'shield', duration: 3 },
+    { slot: 4, id: 'tidal_wave',    name: 'Tidal Wave',    type: 'magic', multiplier: 2.8, rageCost: 50, cooldown: 5, aoe: true },
+  ],
+  wind:  [
+    { slot: 1, id: 'gale_slash',    name: 'Gale Slash',    type: 'physical', multiplier: 1.4, rageCost: 0,  cooldown: 0, aoe: false },
+    { slot: 2, id: 'tornado',       name: 'Tornado',       type: 'physical', multiplier: 1.7, rageCost: 20, cooldown: 2, aoe: true },
+    { slot: 3, id: 'wind_walk',     name: 'Wind Walk',     type: 'buff',     multiplier: 0,   rageCost: 15, cooldown: 3, aoe: false, effect: 'dodge', duration: 2 },
+    { slot: 4, id: 'tempest',       name: 'Tempest',       type: 'physical', multiplier: 3.2, rageCost: 50, cooldown: 5, aoe: true },
+  ],
+  light: [
+    { slot: 1, id: 'holy_smite',    name: 'Holy Smite',    type: 'magic', multiplier: 1.3, rageCost: 0,  cooldown: 0, aoe: false },
+    { slot: 2, id: 'divine_light',  name: 'Divine Light',  type: 'magic', multiplier: 1.5, rageCost: 15, cooldown: 2, aoe: true },
+    { slot: 3, id: 'holy_heal',     name: 'Holy Heal',     type: 'buff',  multiplier: 0,   rageCost: 20, cooldown: 3, aoe: false, effect: 'heal', healPct: 0.2, duration: 1 },
+    { slot: 4, id: 'judgment',      name: 'Judgment',      type: 'magic', multiplier: 2.5, rageCost: 50, cooldown: 5, aoe: true },
+  ],
+  dark:  [
+    { slot: 1, id: 'shadow_bolt',   name: 'Shadow Bolt',   type: 'magic', multiplier: 1.5, rageCost: 0,  cooldown: 0, aoe: false },
+    { slot: 2, id: 'dark_pulse',    name: 'Dark Pulse',    type: 'magic', multiplier: 1.8, rageCost: 20, cooldown: 2, aoe: true },
+    { slot: 3, id: 'life_drain',    name: 'Life Drain',    type: 'magic', multiplier: 1.2, rageCost: 25, cooldown: 3, aoe: false, lifesteal: 0.5 },
+    { slot: 4, id: 'abyss',         name: 'Abyss',         type: 'magic', multiplier: 3.5, rageCost: 50, cooldown: 5, aoe: true },
+  ],
+  electro: [
+    { slot: 1, id: 'spark',         name: 'Spark',         type: 'magic', multiplier: 1.4, rageCost: 0,  cooldown: 0, aoe: false },
+    { slot: 2, id: 'chain_lightning', name: 'Chain Lightning', type: 'magic', multiplier: 1.6, rageCost: 20, cooldown: 2, aoe: true },
+    { slot: 3, id: 'overcharge',    name: 'Overcharge',    type: 'buff',  multiplier: 0,   rageCost: 15, cooldown: 4, aoe: false, effect: 'atkUp', duration: 2 },
+    { slot: 4, id: 'thunder_god',   name: 'Thunder God',   type: 'magic', multiplier: 3.0, rageCost: 50, cooldown: 5, aoe: true, stun: 1 },
+  ],
+};
+
+function sylphTransform(battleId, charId) {
+  const battle = activeBattles.get(battleId);
+  if (!battle || battle.state !== STATE.ACTIVE) return { success: false, msg: 'No active battle' };
+  if (battle.player.charId !== charId) return { success: false };
+  if (battle.player.sylphTransformed) return { success: false, msg: 'Already transformed' };
+  if (battle.player.rage < SYLPH_TRANSFORM_RAGE_COST) return { success: false, msg: 'Need 100 rage' };
+
+  let equipped;
+  try { equipped = sylphModule.getEquippedSylph(charId); } catch (e) {}
+  if (!equipped) return { success: false, msg: 'No equipped sylph' };
+
+  const template = sylphModule.SYLPH_TEMPLATES.find(t => t.id === equipped.template_id);
+  if (!template) return { success: false, msg: 'Invalid sylph' };
+
+  battle.player.rage -= SYLPH_TRANSFORM_RAGE_COST;
+
+  // Save original stats
+  battle.player._savedStats = {
+    attack: battle.player.attack,
+    defence: battle.player.defence,
+    magicAttack: battle.player.magicAttack,
+    magicDefence: battle.player.magicDefence,
+    skills: battle.player.skills,
+    cooldowns: { ...battle.player.cooldowns },
+  };
+
+  // Apply sylph stats on top of player stats
+  const starBonus = 1 + (equipped.stars || 0) * 0.05;
+  const awakenMul = equipped.awakened ? 1.3 : 1.0;
+  const levelMul = 1 + (equipped.level - 1) * 0.02;
+  const mul = starBonus * awakenMul * levelMul;
+
+  battle.player.attack     += Math.floor(template.baseAtk * mul);
+  battle.player.defence    += Math.floor(template.baseDef * mul * 0.5);
+  battle.player.magicAttack += Math.floor(template.baseMAtk * mul);
+  battle.player.magicDefence += Math.floor(template.baseDef * mul * 0.3);
+
+  // Replace skills with sylph element skills
+  const ELEMENT_NAMES = { 1: 'wind', 2: 'fire', 3: 'water', 4: 'electro', 5: 'dark', 6: 'light' };
+  const element = ELEMENT_NAMES[template.element] || 'fire';
+  const sylphSkills = (SYLPH_ELEMENT_SKILLS[element] || SYLPH_ELEMENT_SKILLS.fire).map(s => ({ ...s }));
+  battle.player.skills = sylphSkills;
+  battle.player.cooldowns = {};
+  for (const s of sylphSkills) battle.player.cooldowns[s.id] = 0;
+
+  battle.player.sylphTransformed = true;
+  battle.player.sylphTransformRounds = SYLPH_TRANSFORM_DURATION;
+  battle.player.sylphElement = template.element;
+  battle.player.sylphName = template.name;
+
+  return {
+    success: true,
+    sylphName: template.name,
+    element,
+    duration: SYLPH_TRANSFORM_DURATION,
+    skills: sylphSkills.map(s => ({ slot: s.slot, id: s.id, name: s.name, rageCost: s.rageCost, cooldown: s.cooldown, aoe: !!s.aoe })),
+    attack: battle.player.attack,
+    magicAttack: battle.player.magicAttack,
+  };
+}
+
+function sylphRevert(battleId, charId) {
+  const battle = activeBattles.get(battleId);
+  if (!battle || battle.state !== STATE.ACTIVE) return { success: false };
+  if (battle.player.charId !== charId) return { success: false };
+  if (!battle.player.sylphTransformed) return { success: false, msg: 'Not transformed' };
+  doSylphRevert(battle);
+  return { success: true };
+}
+
+function doSylphRevert(battle) {
+  if (!battle.player._savedStats) return;
+  battle.player.attack = battle.player._savedStats.attack;
+  battle.player.defence = battle.player._savedStats.defence;
+  battle.player.magicAttack = battle.player._savedStats.magicAttack;
+  battle.player.magicDefence = battle.player._savedStats.magicDefence;
+  battle.player.skills = battle.player._savedStats.skills;
+  battle.player.cooldowns = { ...battle.player._savedStats.cooldowns };
+  battle.player._savedStats = null;
+  battle.player.sylphTransformed = false;
+  battle.player.sylphTransformRounds = 0;
+  battle.player.sylphElement = null;
+  battle.player.sylphName = null;
+}
+
 module.exports = {
   OPCODES, MONSTERS, STATE, CLASS_SKILLS, TROOP_COMBAT, MAX_RAGE,
+  SYLPH_ELEMENT_SKILLS, SYLPH_TRANSFORM_DURATION, SYLPH_TRANSFORM_RAGE_COST,
   startBattle, endBattle, processRound, selectSkill, setAuto, getBattle,
   pvpBattle, calcDamage, calcBaseDamage, expForLevel, getClassSkills,
+  sylphTransform, sylphRevert, doSylphRevert, getElementMultiplier,
 };

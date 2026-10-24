@@ -79,6 +79,9 @@ const C = {
   SYLPH_EQUIP:         0x4E21 + 0x1000,
   SYLPH_UPGRADE:       0x4E22 + 0x1000,
   SYLPH_ENGULF:        0x4E23 + 0x1000,
+  SYLPH_STAR:          0x3E85,
+  SYLPH_AWAKEN:        0x3E86,
+  SYLPH_EVOLVE:        0x3E87,
 
   // Mount
   MOUNT_LIST:          0x4268 + 0x2000,
@@ -427,6 +430,9 @@ const S = {
   // Sylph
   SYLPH_LIST_RSP:        0x5E30,
   SYLPH_UPDATE:          0x5E31,
+  SYLPH_STAR_RSP:        0x10A5,
+  SYLPH_AWAKEN_RSP:      0x10A6,
+  SYLPH_EVOLVE_RSP:      0x10A7,
 
   // Mount
   MOUNT_LIST_RSP:        0x6270,

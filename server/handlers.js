@@ -817,6 +817,36 @@ HANDLERS[C.SYLPH_ENGULF] = (ws, body) => {
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
+HANDLERS[C.SYLPH_STAR] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = sylph.upgradeStar(cid, req.sylphId);
+    sendJson(ws, S.SYLPH_STAR_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.SYLPH_AWAKEN] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = sylph.awakenSylph(cid, req.sylphId);
+    sendJson(ws, S.SYLPH_AWAKEN_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.SYLPH_EVOLVE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = sylph.evolveSylph(cid, req.sylphId);
+    sendJson(ws, S.SYLPH_EVOLVE_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
 // ─── Mount ──────────────────────────────────
 HANDLERS[C.MOUNT_LIST] = (ws) => {
   const cid = charId(ws);
