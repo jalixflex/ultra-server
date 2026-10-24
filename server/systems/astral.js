@@ -68,6 +68,10 @@ function captureAstral(charId, useBalens = false) {
   const char = db.getCharacterById(charId);
   if (!char) return { success: false, msg: 'Character not found' };
 
+  if (!require('./feature-unlock').isFeatureUnlocked(char.grade, 'astral')) {
+    return { success: false, msg: 'Astral unlocks at level 25' };
+  }
+
   const goldCost = useBalens ? 0 : 10000 + char.grade * 500;
   const balensCost = useBalens ? 50 : 0;
 
