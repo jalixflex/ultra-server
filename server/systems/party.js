@@ -367,10 +367,25 @@ function fightBoss(charId, dungeonId, difficulty) {
     chars.push(c);
   }
 
-  // Combined party stats
-  const totalAtk = chars.reduce((s, c) => s + c.attack, 0);
-  const totalDef = chars.reduce((s, c) => s + c.defence, 0);
-  const totalHp = chars.reduce((s, c) => s + (c.max_hp || c.hp), 0);
+  // Sylph bonuses from equipped sylphs
+  let sylphBonusAtk = 0, sylphBonusDef = 0, sylphBonusHp = 0;
+  try {
+    const sylphMod = require('./sylph');
+    for (const mid of memberIds) {
+      const sylphs = sylphMod.getSylphs(mid);
+      const equipped = sylphs.find(s => s.equipped);
+      if (equipped) {
+        sylphBonusAtk += equipped.attack;
+        sylphBonusDef += equipped.defence;
+        sylphBonusHp += equipped.hp;
+      }
+    }
+  } catch (e) { /* sylph module not ready */ }
+
+  // Combined party stats (includes sylph bonuses)
+  const totalAtk = chars.reduce((s, c) => s + c.attack, 0) + sylphBonusAtk;
+  const totalDef = chars.reduce((s, c) => s + c.defence, 0) + sylphBonusDef;
+  const totalHp = chars.reduce((s, c) => s + (c.max_hp || c.hp), 0) + sylphBonusHp;
   const avgAtk = Math.floor(totalAtk / chars.length);
   const avgDef = Math.floor(totalDef / chars.length);
 
@@ -443,6 +458,28 @@ function fightBoss(charId, dungeonId, difficulty) {
         const quest = require('./quest');
         quest.updateProgress(mid, 'mpd', String(dungeonId));
         quest.checkLevelUp(mid);
+      } catch (e) { /* ignore */ }
+
+      // Achievement triggers
+      try {
+        const achievement = require('./achievement');
+        achievement.incrementStat(mid, 'mpd_completed', 1);
+      } catch (e) { /* ignore */ }
+
+      // Random drop rewards scaled by difficulty
+      try {
+        const inventory = require('./inventory');
+        const dropChance = 0.3 + diff * 0.15;
+        const possibleDrops = [
+          { itemId: 100001, count: 5 },
+          { itemId: 100003, count: 2 },
+          { itemId: 3001, count: 1, quality: diff + 1 },
+        ];
+        for (const drop of possibleDrops) {
+          if (Math.random() < dropChance) {
+            inventory.addItem(mid, drop.itemId, drop.count, drop.quality || 0);
+          }
+        }
       } catch (e) { /* ignore */ }
     }
   }
