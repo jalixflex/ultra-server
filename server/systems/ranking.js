@@ -3,72 +3,102 @@
 const db = require('../db');
 
 const OPCODES = {
-  C_RANKING_LIST:   0x8100,
-  S_RANKING_LIST:   0x8110,
-  C_RANKING_DETAIL: 0x8101,
-  S_RANKING_DETAIL: 0x8111,
+  C_RANKING_LIST:    0x8100,
+  S_RANKING_LIST:    0x8110,
+  C_RANKING_SELF:    0x8101,
+  S_RANKING_SELF:    0x8111,
+  C_RANKING_REWARDS: 0x8102,
+  S_RANKING_REWARDS: 0x8112,
 };
 
-const RANKING_TYPES = {
-  BR:          { id: 1,  name: 'Battle Rating', query: 'SELECT id, name, grade, class, br FROM characters ORDER BY br DESC LIMIT 100' },
-  LEVEL:       { id: 2,  name: 'Level',         query: 'SELECT id, name, grade, class, br FROM characters ORDER BY grade DESC, exp DESC LIMIT 100' },
-  ARENA:       { id: 3,  name: 'Arena',         query: `SELECT c.id, c.name, c.grade, c.class, a.rating as score FROM characters c JOIN arena_data a ON c.id = a.char_id ORDER BY a.rating DESC LIMIT 100` },
-  GUILD:       { id: 4,  name: 'Guild',         query: `SELECT id, name, level as score FROM guilds ORDER BY level DESC, wealth DESC LIMIT 100` },
-  GOLD:        { id: 5,  name: 'Wealth',        query: 'SELECT id, name, grade, class, gold as score FROM characters ORDER BY gold DESC LIMIT 100' },
-  MOUNT:       { id: 6,  name: 'Mount',         query: `SELECT c.id, c.name, c.grade, c.class, m.level as score FROM characters c JOIN mounts m ON c.id = m.char_id ORDER BY m.level DESC LIMIT 100` },
-  SYLPH:       { id: 7,  name: 'Sylph',         query: `SELECT c.id, c.name, c.grade, c.class, s.level as score FROM characters c JOIN sylphs s ON c.id = s.char_id AND s.is_active = 1 ORDER BY s.level DESC LIMIT 100` },
-  WINGS:       { id: 8,  name: 'Wings',         query: `SELECT c.id, c.name, c.grade, c.class, w.level as score FROM characters c JOIN wings w ON c.id = w.char_id ORDER BY w.level DESC LIMIT 100` },
-  CAMPAIGN:    { id: 9,  name: 'Campaign',      query: `SELECT c.id, c.name, c.grade, c.class, cp.current_stage as score FROM characters c JOIN campaign_progress cp ON c.id = cp.char_id ORDER BY cp.current_stage DESC LIMIT 100` },
-  ACHIEVEMENT: { id: 10, name: 'Achievement',   query: `SELECT c.id, c.name, c.grade, c.class, COUNT(a.id) as score FROM characters c LEFT JOIN achievements a ON c.id = a.char_id AND a.completed = 1 GROUP BY c.id ORDER BY score DESC LIMIT 100` },
+const CATEGORIES = {
+  br:    { name: 'Battle Rating', column: 'battle_rating', table: 'characters', order: 'DESC' },
+  level: { name: 'Level',         column: 'grade',         table: 'characters', order: 'DESC' },
+  gold:  { name: 'Wealth',        column: 'gold',          table: 'characters', order: 'DESC' },
+  arena: { name: 'Arena',         column: 'rank',          table: 'arena',      order: 'ASC' },
+  guild: { name: 'Guild',         column: 'level',         table: 'guilds',     order: 'DESC', isGuild: true },
+};
+
+const TOP_REWARDS = {
+  1:   { gold: 500000, boundBalens: 200, insignia: 500 },
+  2:   { gold: 300000, boundBalens: 150, insignia: 350 },
+  3:   { gold: 200000, boundBalens: 100, insignia: 250 },
+  10:  { gold: 100000, boundBalens: 50,  insignia: 150 },
+  50:  { gold: 50000,  boundBalens: 20,  insignia: 80 },
+  100: { gold: 20000,  boundBalens: 10,  insignia: 40 },
 };
 
 function initDB() {
-  // Rankings are computed from existing tables, no extra tables needed
+  db.getDatabase().exec(`
+    CREATE TABLE IF NOT EXISTS ranking_rewards (
+      char_id   INTEGER NOT NULL REFERENCES characters(id),
+      category  TEXT NOT NULL,
+      week      TEXT NOT NULL,
+      rank_num  INTEGER DEFAULT 0,
+      claimed   INTEGER DEFAULT 0,
+      PRIMARY KEY(char_id, category, week)
+    );
+  `);
 }
 
-function getRankingList(rankingType) {
-  const rt = Object.values(RANKING_TYPES).find(r => r.id === rankingType);
-  if (!rt) return { success: false, msg: 'Invalid ranking type' };
+function getRankingList(category, limit) {
+  const cat = CATEGORIES[category];
+  if (!cat) return { success: false, msg: 'Invalid category' };
+  limit = Math.min(limit || 100, 100);
 
-  try {
-    const rows = db.getDatabase().prepare(rt.query).all();
-    return {
-      success: true,
-      rankingType: rt.id,
-      name: rt.name,
-      entries: rows.map((r, idx) => ({
-        rank: idx + 1,
-        charId: r.id,
-        name: r.name,
-        level: r.grade || r.level || 0,
-        className: r.class || '',
-        score: r.br || r.score || r.gold || 0,
-      })),
-    };
-  } catch (e) {
-    return { success: true, rankingType: rt.id, name: rt.name, entries: [] };
+  if (cat.isGuild) {
+    const rows = db.getDatabase().prepare(
+      `SELECT id, name, ${cat.column} as value FROM ${cat.table} ORDER BY ${cat.column} ${cat.order} LIMIT ?`
+    ).all(limit);
+    return { success: true, category, name: cat.name, rankings: rows.map((r, i) => ({ rank: i + 1, id: r.id, name: r.name, value: r.value })) };
   }
+
+  const rows = db.getDatabase().prepare(
+    `SELECT c.id, c.name, c.class, c.grade, ${cat.table === 'characters' ? 'c.' + cat.column : 'a.' + cat.column} as value
+     FROM characters c ${cat.table !== 'characters' ? `LEFT JOIN ${cat.table} a ON a.char_id = c.id` : ''}
+     ORDER BY value ${cat.order} LIMIT ?`
+  ).all(limit);
+
+  return { success: true, category, name: cat.name, rankings: rows.map((r, i) => ({ rank: i + 1, id: r.id, name: r.name, class: r.class, level: r.grade, value: r.value })) };
 }
 
-function getPlayerRank(charId, rankingType) {
-  const result = getRankingList(rankingType);
-  if (!result.success) return { success: false };
-  const idx = result.entries.findIndex(e => e.charId === charId);
-  return {
-    success: true,
-    rank: idx >= 0 ? idx + 1 : 0,
-    total: result.entries.length,
-  };
+function getSelfRank(charId, category) {
+  const cat = CATEGORIES[category];
+  if (!cat || cat.isGuild) return { success: false, msg: 'Invalid category' };
+  const char = db.getCharacterById(charId);
+  if (!char) return { success: false, msg: 'Not found' };
+
+  let value;
+  if (cat.table === 'characters') { value = char[cat.column] || 0; }
+  else {
+    const r = db.getDatabase().prepare(`SELECT ${cat.column} as v FROM ${cat.table} WHERE char_id = ?`).get(charId);
+    value = r ? r.v : 0;
+  }
+  const op = cat.order === 'DESC' ? '>' : '<';
+  const c = db.getDatabase().prepare(
+    cat.table === 'characters' ? `SELECT COUNT(*) as c FROM characters WHERE ${cat.column} ${op} ?` : `SELECT COUNT(*) as c FROM ${cat.table} WHERE ${cat.column} ${op} ?`
+  ).get(value);
+  return { success: true, category, rank: (c ? c.c : 0) + 1, value, name: char.name };
 }
 
-function getAllRankingTypes() {
-  return {
-    success: true,
-    types: Object.values(RANKING_TYPES).map(r => ({ id: r.id, name: r.name })),
-  };
+function claimRankingReward(charId, category) {
+  const now = new Date();
+  const week = `${now.getFullYear()}-W${String(Math.ceil(((now - new Date(now.getFullYear(),0,1))/86400000 + new Date(now.getFullYear(),0,1).getDay()+1)/7)).padStart(2,'0')}`;
+  const row = db.getDatabase().prepare('SELECT * FROM ranking_rewards WHERE char_id = ? AND category = ? AND week = ?').get(charId, category, week);
+  if (!row) return { success: false, msg: 'No reward available' };
+  if (row.claimed) return { success: false, msg: 'Already claimed' };
+
+  let reward = null;
+  for (const [th, r] of Object.entries(TOP_REWARDS).sort((a,b) => Number(a[0]) - Number(b[0]))) {
+    if (row.rank_num <= Number(th)) { reward = r; break; }
+  }
+  if (!reward) return { success: false, msg: 'No reward for your rank' };
+
+  if (reward.gold) db.getDatabase().prepare('UPDATE characters SET gold = gold + ? WHERE id = ?').run(reward.gold, charId);
+  if (reward.boundBalens) db.getDatabase().prepare('UPDATE characters SET bound_balens = bound_balens + ? WHERE id = ?').run(reward.boundBalens, charId);
+  if (reward.insignia) db.getDatabase().prepare('UPDATE characters SET insignia = insignia + ? WHERE id = ?').run(reward.insignia, charId);
+  db.getDatabase().prepare('UPDATE ranking_rewards SET claimed = 1 WHERE char_id = ? AND category = ? AND week = ?').run(charId, category, week);
+  return { success: true, rank: row.rank_num, reward };
 }
 
-module.exports = {
-  OPCODES, RANKING_TYPES,
-  initDB, getRankingList, getPlayerRank, getAllRankingTypes,
-};
+module.exports = { OPCODES, CATEGORIES, TOP_REWARDS, initDB, getRankingList, getSelfRank, claimRankingReward };

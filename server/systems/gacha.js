@@ -5,166 +5,157 @@ const db = require('../db');
 const OPCODES = {
   C_GACHA_INFO:     0x8000,
   S_GACHA_INFO:     0x8010,
-  C_GACHA_SPIN:     0x8001,
-  S_GACHA_SPIN:     0x8011,
-  C_GACHA_TEN_SPIN: 0x8002,
-  S_GACHA_TEN_SPIN: 0x8012,
+  C_GACHA_PULL:     0x8001,
+  S_GACHA_PULL:     0x8011,
+  C_GACHA_HISTORY:  0x8002,
+  S_GACHA_HISTORY:  0x8012,
 };
 
-const GACHA_POOLS = [
-  {
-    id: 1, name: 'Standard Chest', costType: 'gold', costAmount: 50000, tenCostAmount: 450000,
-    items: [
-      { itemId: 'gold_bag_s',     name: 'Small Gold Bag',    rarity: 1, weight: 300, rewards: { gold: 10000 } },
-      { itemId: 'exp_scroll_s',   name: 'EXP Scroll (S)',    rarity: 1, weight: 250, rewards: { exp: 5000 } },
-      { itemId: 'soul_crystal_1', name: 'Soul Crystal I',    rarity: 2, weight: 150, rewards: { item: 'soul_crystal_1', amount: 1 } },
-      { itemId: 'mount_whip',     name: 'Mount Training Whip', rarity: 2, weight: 120, rewards: { item: 'mount_whip', amount: 5 } },
-      { itemId: 'rune_stone',     name: 'Rune Stone',        rarity: 2, weight: 80,  rewards: { item: 'rune_stone', amount: 3 } },
-      { itemId: 'gem_pack_1',     name: 'Lv1 Gem Pack',      rarity: 3, weight: 50,  rewards: { item: 'gem_pack_1', amount: 1 } },
-      { itemId: 'wing_feather',   name: 'Wing Feather',      rarity: 3, weight: 30,  rewards: { item: 'wing_feather', amount: 2 } },
-      { itemId: 'rare_mount',     name: 'Rare Mount Card',   rarity: 4, weight: 15,  rewards: { item: 'rare_mount', amount: 1 } },
-      { itemId: 'sylph_shard',    name: 'Sylph Shard',       rarity: 4, weight: 5,   rewards: { item: 'sylph_shard', amount: 1 } },
+const BANNERS = {
+  standard: {
+    id: 'standard', name: 'Standard Wheel', costType: 'gold', costAmount: 10000,
+    pool: [
+      { id: 'gold_500',      name: '500 Gold',         type: 'gold',    amount: 500,    rarity: 'common',    weight: 30 },
+      { id: 'gold_2000',     name: '2000 Gold',        type: 'gold',    amount: 2000,   rarity: 'common',    weight: 20 },
+      { id: 'exp_1000',      name: '1000 EXP',         type: 'exp',     amount: 1000,   rarity: 'common',    weight: 15 },
+      { id: 'exp_5000',      name: '5000 EXP',         type: 'exp',     amount: 5000,   rarity: 'uncommon',  weight: 12 },
+      { id: 'gold_10000',    name: '10000 Gold',       type: 'gold',    amount: 10000,  rarity: 'uncommon',  weight: 10 },
+      { id: 'bbalens_5',     name: '5 Bound Balens',   type: 'bound_balens', amount: 5, rarity: 'rare',      weight: 6 },
+      { id: 'gem_lv1',       name: 'Lv1 Gem',          type: 'item',    itemId: 'gem_random_1', rarity: 'rare', weight: 4 },
+      { id: 'bbalens_20',    name: '20 Bound Balens',  type: 'bound_balens', amount: 20, rarity: 'epic',     weight: 2 },
+      { id: 'mount_ticket',  name: 'Mount Whip',       type: 'item',    itemId: 'mount_whip', rarity: 'legendary', weight: 1 },
     ],
   },
-  {
-    id: 2, name: 'Premium Chest', costType: 'balens', costAmount: 100, tenCostAmount: 900,
-    items: [
-      { itemId: 'gold_bag_l',     name: 'Large Gold Bag',    rarity: 2, weight: 200, rewards: { gold: 100000 } },
-      { itemId: 'exp_scroll_l',   name: 'EXP Scroll (L)',    rarity: 2, weight: 180, rewards: { exp: 50000 } },
-      { itemId: 'soul_crystal_3', name: 'Soul Crystal III',  rarity: 3, weight: 120, rewards: { item: 'soul_crystal_3', amount: 1 } },
-      { itemId: 'rune_stone_p',   name: 'Premium Rune Stone', rarity: 3, weight: 100, rewards: { item: 'rune_stone_p', amount: 5 } },
-      { itemId: 'gem_pack_3',     name: 'Lv3 Gem Pack',      rarity: 3, weight: 80,  rewards: { item: 'gem_pack_3', amount: 1 } },
-      { itemId: 'sylph_equip',    name: 'Sylph Equipment',   rarity: 4, weight: 50,  rewards: { item: 'sylph_equip', amount: 1 } },
-      { itemId: 'dragon_crystal', name: 'Dragon Crystal',    rarity: 4, weight: 40,  rewards: { item: 'dragon_crystal', amount: 3 } },
-      { itemId: 'epic_mount',     name: 'Epic Mount Card',   rarity: 5, weight: 20,  rewards: { item: 'epic_mount', amount: 1 } },
-      { itemId: 'legendary_wing', name: 'Legendary Wing',    rarity: 5, weight: 8,   rewards: { item: 'legendary_wing', amount: 1 } },
-      { itemId: 'eudaemon_shard', name: 'Eudaemon Shard',    rarity: 5, weight: 2,   rewards: { item: 'eudaemon_shard', amount: 1 } },
+  premium: {
+    id: 'premium', name: 'Premium Wheel', costType: 'balens', costAmount: 50,
+    pool: [
+      { id: 'gold_5000',     name: '5000 Gold',         type: 'gold',    amount: 5000,   rarity: 'common',    weight: 25 },
+      { id: 'exp_5000p',     name: '5000 EXP',          type: 'exp',     amount: 5000,   rarity: 'common',    weight: 20 },
+      { id: 'bbalens_10',    name: '10 Bound Balens',   type: 'bound_balens', amount: 10, rarity: 'uncommon', weight: 15 },
+      { id: 'gold_30000',    name: '30000 Gold',        type: 'gold',    amount: 30000,  rarity: 'uncommon',  weight: 12 },
+      { id: 'gem_lv3',       name: 'Lv3 Gem',           type: 'item',    itemId: 'gem_random_3', rarity: 'rare', weight: 10 },
+      { id: 'bbalens_50',    name: '50 Bound Balens',   type: 'bound_balens', amount: 50, rarity: 'rare',     weight: 8 },
+      { id: 'sylph_shard',   name: 'Sylph Shard x5',    type: 'item',    itemId: 'sylph_shard', amount: 5, rarity: 'epic', weight: 6 },
+      { id: 'mount_card',    name: 'Mount Card',         type: 'item',    itemId: 'mount_card', rarity: 'epic', weight: 3 },
+      { id: 'legendary_gem', name: 'Lv7 Gem',           type: 'item',    itemId: 'gem_random_7', rarity: 'legendary', weight: 1 },
     ],
   },
-  {
-    id: 3, name: 'Lucky Wheel', costType: 'voucher', costAmount: 1, tenCostAmount: 10,
-    items: [
-      { itemId: 'gold_bag_m',     name: 'Medium Gold Bag',   rarity: 1, weight: 250, rewards: { gold: 50000 } },
-      { itemId: 'bound_balens_50', name: '50 Bound Balens',  rarity: 2, weight: 200, rewards: { bound_balens: 50 } },
-      { itemId: 'star_sand',      name: 'Star Sand',         rarity: 3, weight: 100, rewards: { item: 'star_sand', amount: 5 } },
-      { itemId: 'holy_stone',     name: 'Holy Stone',        rarity: 3, weight: 80,  rewards: { item: 'holy_stone', amount: 10 } },
-      { itemId: 'dragon_crystal', name: 'Dragon Crystal',    rarity: 4, weight: 40,  rewards: { item: 'dragon_crystal', amount: 2 } },
-      { itemId: 'clothing_shard', name: 'Clothing Shard',    rarity: 4, weight: 30,  rewards: { item: 'clothing_shard', amount: 5 } },
-    ],
-  },
-];
+};
 
-const PITY_THRESHOLD = 50;
+const PITY_RARE = 10;
+const PITY_LEGENDARY = 50;
 
 function initDB() {
   db.getDatabase().exec(`
+    CREATE TABLE IF NOT EXISTS gacha (
+      char_id    INTEGER NOT NULL REFERENCES characters(id),
+      banner     TEXT NOT NULL,
+      pull_count INTEGER DEFAULT 0,
+      pity_rare  INTEGER DEFAULT 0,
+      pity_legend INTEGER DEFAULT 0,
+      free_today TEXT DEFAULT '',
+      PRIMARY KEY(char_id, banner)
+    );
     CREATE TABLE IF NOT EXISTS gacha_history (
       id        INTEGER PRIMARY KEY AUTOINCREMENT,
-      char_id   INTEGER NOT NULL REFERENCES characters(id),
-      pool_id   INTEGER NOT NULL,
-      item_id   TEXT NOT NULL,
-      rarity    INTEGER NOT NULL,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
-    CREATE TABLE IF NOT EXISTS gacha_pity (
-      char_id   INTEGER NOT NULL REFERENCES characters(id),
-      pool_id   INTEGER NOT NULL,
-      counter   INTEGER DEFAULT 0,
-      PRIMARY KEY(char_id, pool_id)
+      char_id   INTEGER NOT NULL,
+      banner    TEXT NOT NULL,
+      prize_id  TEXT NOT NULL,
+      prize_name TEXT NOT NULL,
+      rarity    TEXT NOT NULL,
+      pulled_at TEXT DEFAULT (datetime('now'))
     );
   `);
 }
 
-function getPoolInfo(poolId) {
-  return GACHA_POOLS.find(p => p.id === poolId) || null;
+function ensureEntry(charId, banner) {
+  db.getDatabase().prepare('INSERT OR IGNORE INTO gacha (char_id, banner) VALUES (?, ?)').run(charId, banner);
 }
 
-function rollItem(pool, pityCount) {
-  let items = pool.items;
-  if (pityCount >= PITY_THRESHOLD) {
-    items = items.filter(i => i.rarity >= 4);
-    if (items.length === 0) items = pool.items;
-  }
-  const totalWeight = items.reduce((sum, i) => sum + i.weight, 0);
+function weightedPick(pool) {
+  const totalWeight = pool.reduce((s, p) => s + p.weight, 0);
   let roll = Math.random() * totalWeight;
-  for (const item of items) {
-    roll -= item.weight;
-    if (roll <= 0) return item;
+  for (const prize of pool) {
+    roll -= prize.weight;
+    if (roll <= 0) return prize;
   }
-  return items[items.length - 1];
+  return pool[pool.length - 1];
 }
 
-function getInfo(charId) {
-  const pools = GACHA_POOLS.map(p => {
-    const pity = db.getDatabase().prepare('SELECT counter FROM gacha_pity WHERE char_id = ? AND pool_id = ?').get(charId, p.id);
-    return {
-      poolId: p.id,
-      name: p.name,
-      costType: p.costType,
-      costAmount: p.costAmount,
-      tenCostAmount: p.tenCostAmount,
-      pityCounter: pity ? pity.counter : 0,
-      pityThreshold: PITY_THRESHOLD,
-      items: p.items.map(i => ({ itemId: i.itemId, name: i.name, rarity: i.rarity })),
+function getGachaInfo(charId) {
+  const result = {};
+  for (const [key, banner] of Object.entries(BANNERS)) {
+    ensureEntry(charId, key);
+    const row = db.getDatabase().prepare('SELECT * FROM gacha WHERE char_id = ? AND banner = ?').get(charId, key);
+    const today = new Date().toISOString().slice(0, 10);
+    result[key] = {
+      id: banner.id, name: banner.name, costType: banner.costType, costAmount: banner.costAmount,
+      pullCount: row.pull_count, pityRare: PITY_RARE - row.pity_rare, pityLegendary: PITY_LEGENDARY - row.pity_legend,
+      freeAvailable: row.free_today !== today,
     };
-  });
-  return { success: true, pools };
+  }
+  return { success: true, banners: result };
 }
 
-function spin(charId, poolId, count) {
-  const pool = getPoolInfo(poolId);
-  if (!pool) return { success: false, msg: 'Invalid pool' };
-  count = count || 1;
-  if (count !== 1 && count !== 10) return { success: false, msg: 'Spin 1 or 10' };
+function pull(charId, bannerId, useFree) {
+  const banner = BANNERS[bannerId];
+  if (!banner) return { success: false, msg: 'Invalid banner' };
+  ensureEntry(charId, bannerId);
+  const row = db.getDatabase().prepare('SELECT * FROM gacha WHERE char_id = ? AND banner = ?').get(charId, bannerId);
+  const today = new Date().toISOString().slice(0, 10);
+  const isFree = useFree && row.free_today !== today;
 
-  const char = db.getCharacterById(charId);
-  if (!char) return { success: false, msg: 'Character not found' };
-
-  const totalCost = count === 10 ? pool.tenCostAmount : pool.costAmount;
-
-  if (pool.costType === 'gold') {
-    if (char.gold < totalCost) return { success: false, msg: 'Not enough gold' };
-    db.getDatabase().prepare('UPDATE characters SET gold = gold - ? WHERE id = ?').run(totalCost, charId);
-  } else if (pool.costType === 'balens') {
-    if ((char.balens || 0) < totalCost) return { success: false, msg: 'Not enough balens' };
-    db.getDatabase().prepare('UPDATE characters SET balens = balens - ? WHERE id = ?').run(totalCost, charId);
-  } else if (pool.costType === 'voucher') {
-    if ((char.vouchers || 0) < totalCost) return { success: false, msg: 'Not enough vouchers' };
-    db.getDatabase().prepare('UPDATE characters SET vouchers = vouchers - ? WHERE id = ?').run(totalCost, charId);
+  if (!isFree) {
+    const char = db.getCharacterById(charId);
+    if (!char) return { success: false, msg: 'Character not found' };
+    if (banner.costType === 'gold' && char.gold < banner.costAmount) return { success: false, msg: 'Not enough gold' };
+    if (banner.costType === 'balens' && char.balens < banner.costAmount) return { success: false, msg: 'Not enough balens' };
+    const col = banner.costType === 'gold' ? 'gold' : 'balens';
+    db.getDatabase().prepare(`UPDATE characters SET ${col} = ${col} - ? WHERE id = ?`).run(banner.costAmount, charId);
   }
 
-  db.getDatabase().prepare('INSERT OR IGNORE INTO gacha_pity (char_id, pool_id) VALUES (?, ?)').run(charId, poolId);
-  const pity = db.getDatabase().prepare('SELECT counter FROM gacha_pity WHERE char_id = ? AND pool_id = ?').get(charId, poolId);
+  const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+  let prize;
+  const newPityRare = row.pity_rare + 1;
+  const newPityLegend = row.pity_legend + 1;
 
-  const results = [];
-  let pityCounter = pity ? pity.counter : 0;
-
-  for (let i = 0; i < count; i++) {
-    const item = rollItem(pool, pityCounter);
-    results.push({ itemId: item.itemId, name: item.name, rarity: item.rarity });
-
-    db.getDatabase().prepare('INSERT INTO gacha_history (char_id, pool_id, item_id, rarity) VALUES (?, ?, ?, ?)')
-      .run(charId, poolId, item.itemId, item.rarity);
-
-    if (item.rarity >= 4) {
-      pityCounter = 0;
-    } else {
-      pityCounter++;
-    }
-
-    if (item.rewards) {
-      if (item.rewards.gold) db.getDatabase().prepare('UPDATE characters SET gold = gold + ? WHERE id = ?').run(item.rewards.gold, charId);
-      if (item.rewards.exp) db.getDatabase().prepare('UPDATE characters SET exp = exp + ? WHERE id = ?').run(item.rewards.exp, charId);
-      if (item.rewards.bound_balens) db.getDatabase().prepare('UPDATE characters SET bound_balens = bound_balens + ? WHERE id = ?').run(item.rewards.bound_balens, charId);
-    }
+  if (newPityLegend >= PITY_LEGENDARY) {
+    const pool = banner.pool.filter(p => p.rarity === 'legendary');
+    prize = pool.length ? pool[Math.floor(Math.random() * pool.length)] : weightedPick(banner.pool);
+  } else if (newPityRare >= PITY_RARE) {
+    const pool = banner.pool.filter(p => RARITY_ORDER.indexOf(p.rarity) >= 2);
+    prize = pool.length ? weightedPick(pool) : weightedPick(banner.pool);
+  } else {
+    prize = weightedPick(banner.pool);
   }
 
-  db.getDatabase().prepare('UPDATE gacha_pity SET counter = ? WHERE char_id = ? AND pool_id = ?').run(pityCounter, charId, poolId);
+  const prIdx = RARITY_ORDER.indexOf(prize.rarity);
+  const resetRare = prIdx >= 2 ? 0 : newPityRare;
+  const resetLegend = prIdx >= 4 ? 0 : newPityLegend;
 
-  return { success: true, results, pityCounter };
+  if (isFree) {
+    db.getDatabase().prepare('UPDATE gacha SET pull_count = pull_count + 1, pity_rare = ?, pity_legend = ?, free_today = ? WHERE char_id = ? AND banner = ?')
+      .run(resetRare, resetLegend, today, charId, bannerId);
+  } else {
+    db.getDatabase().prepare('UPDATE gacha SET pull_count = pull_count + 1, pity_rare = ?, pity_legend = ? WHERE char_id = ? AND banner = ?')
+      .run(resetRare, resetLegend, charId, bannerId);
+  }
+
+  const amount = prize.amount || 1;
+  if (prize.type === 'gold') db.getDatabase().prepare('UPDATE characters SET gold = gold + ? WHERE id = ?').run(amount, charId);
+  if (prize.type === 'exp') db.getDatabase().prepare('UPDATE characters SET exp = exp + ? WHERE id = ?').run(amount, charId);
+  if (prize.type === 'bound_balens') db.getDatabase().prepare('UPDATE characters SET bound_balens = bound_balens + ? WHERE id = ?').run(amount, charId);
+
+  db.getDatabase().prepare('INSERT INTO gacha_history (char_id, banner, prize_id, prize_name, rarity) VALUES (?, ?, ?, ?, ?)')
+    .run(charId, bannerId, prize.id, prize.name, prize.rarity);
+
+  return { success: true, prize: { id: prize.id, name: prize.name, type: prize.type, rarity: prize.rarity, amount }, wasFree: isFree };
 }
 
-module.exports = {
-  OPCODES, GACHA_POOLS, PITY_THRESHOLD,
-  initDB, getInfo, spin, getPoolInfo,
-};
+function getHistory(charId, bannerId, limit) {
+  const rows = db.getDatabase().prepare('SELECT * FROM gacha_history WHERE char_id = ? AND banner LIKE ? ORDER BY id DESC LIMIT ?')
+    .all(charId, bannerId || '%', limit || 20);
+  return { success: true, history: rows };
+}
+
+module.exports = { OPCODES, BANNERS, PITY_RARE, PITY_LEGENDARY, initDB, getGachaInfo, pull, getHistory };

@@ -1863,7 +1863,7 @@ HANDLERS[C.HOT_EVENT_CLAIM] = (ws, body) => {
 HANDLERS[C.GACHA_INFO] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  sendJson(ws, S.GACHA_INFO_RSP, gacha.getInfo(cid));
+  sendJson(ws, S.GACHA_INFO_RSP, gacha.getGachaInfo(cid));
 };
 
 HANDLERS[C.GACHA_SPIN] = (ws, body) => {
@@ -1871,7 +1871,7 @@ HANDLERS[C.GACHA_SPIN] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    sendJson(ws, S.GACHA_SPIN_RSP, gacha.spin(cid, req.poolId, 1));
+    sendJson(ws, S.GACHA_SPIN_RSP, gacha.pull(cid, req.poolId, 1));
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
@@ -1880,7 +1880,7 @@ HANDLERS[C.GACHA_TEN_SPIN] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    sendJson(ws, S.GACHA_TEN_SPIN_RSP, gacha.spin(cid, req.poolId, 10));
+    sendJson(ws, S.GACHA_TEN_SPIN_RSP, gacha.pull(cid, req.poolId, 10));
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
@@ -1890,7 +1890,7 @@ HANDLERS[C.RANKING_LIST] = (ws, body) => {
     const req = JSON.parse(body.toString());
     sendJson(ws, S.RANKING_LIST_RSP, ranking.getRankingList(req.rankingType));
   } catch (e) {
-    sendJson(ws, S.RANKING_LIST_RSP, ranking.getAllRankingTypes());
+    sendJson(ws, S.RANKING_LIST_RSP, ranking.getRankingList('br'));
   }
 };
 
@@ -1899,7 +1899,7 @@ HANDLERS[C.RANKING_DETAIL] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    sendJson(ws, S.RANKING_DETAIL_RSP, ranking.getPlayerRank(cid, req.rankingType));
+    sendJson(ws, S.RANKING_DETAIL_RSP, ranking.getSelfRank(cid, req.rankingType));
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
@@ -1916,7 +1916,7 @@ HANDLERS[C.PLAYER_PROFILE] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    sendJson(ws, S.PLAYER_PROFILE_RSP, social.getPlayerProfile(cid, req.targetId));
+    sendJson(ws, S.PLAYER_PROFILE_RSP, social.getProfile(req.targetId || cid));
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
@@ -1947,7 +1947,7 @@ HANDLERS[C.BLOCK_LIST] = (ws) => {
 HANDLERS[C.RECENT_CONTACTS] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  sendJson(ws, S.RECENT_CONTACTS_RSP, social.getRecentContacts(cid));
+  sendJson(ws, S.RECENT_CONTACTS_RSP, social.getRecommendedFriends(cid));
 };
 
 HANDLERS[C.TRADE_REQUEST] = (ws, body) => {
@@ -1955,7 +1955,7 @@ HANDLERS[C.TRADE_REQUEST] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    sendJson(ws, S.TRADE_REQUEST_RSP, social.requestTrade(cid, req.targetId));
+    sendJson(ws, S.TRADE_REQUEST_RSP, social.sendGift(cid, req.targetId, req.giftId || 'flower'));
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
@@ -1964,17 +1964,12 @@ HANDLERS[C.TRADE_CONFIRM] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    sendJson(ws, S.TRADE_CONFIRM_RSP, social.confirmTrade(cid, req.tradeId));
+    sendJson(ws, S.TRADE_CONFIRM_RSP, social.sendGift(cid, req.targetId, req.giftId || 'ring'));
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
-HANDLERS[C.TRADE_CANCEL] = (ws, body) => {
-  const cid = charId(ws);
-  if (!cid) return;
-  try {
-    const req = JSON.parse(body.toString());
-    sendJson(ws, S.TRADE_CANCEL_RSP, social.cancelTrade(cid, req.tradeId));
-  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+HANDLERS[C.TRADE_CANCEL] = (ws) => {
+  sendJson(ws, S.TRADE_CANCEL_RSP, { success: true, msg: 'Trade cancelled' });
 };
 
 // ─── Knighthood ────────────────────────────
@@ -1984,10 +1979,13 @@ HANDLERS[C.KNIGHTHOOD_INFO] = (ws) => {
   sendJson(ws, S.KNIGHTHOOD_INFO_RSP, knighthood.getKnighthoodInfo(cid));
 };
 
-HANDLERS[C.KNIGHTHOOD_UPGRADE] = (ws) => {
+HANDLERS[C.KNIGHTHOOD_UPGRADE] = (ws, body) => {
   const cid = charId(ws);
   if (!cid) return;
-  sendJson(ws, S.KNIGHTHOOD_UPGRADE_RSP, knighthood.gainKhExp(cid, 100));
+  try {
+    const req = JSON.parse(body.toString());
+    sendJson(ws, S.KNIGHTHOOD_UPGRADE_RSP, knighthood.trainKnight(cid, req.knightId || 1));
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
 HANDLERS[C.KNIGHTHOOD_SKILL] = (ws, body) => {
@@ -1995,7 +1993,7 @@ HANDLERS[C.KNIGHTHOOD_SKILL] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    sendJson(ws, S.KNIGHTHOOD_SKILL_RSP, knighthood.upgradeKhSkill(cid, req.skillId));
+    sendJson(ws, S.KNIGHTHOOD_SKILL_RSP, knighthood.recruitKnight(cid, req.knightId || 1));
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
@@ -2004,7 +2002,7 @@ HANDLERS[C.KNIGHTHOOD_SET_ACTIVE] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    sendJson(ws, S.KNIGHTHOOD_SET_ACTIVE_RSP, knighthood.setActiveSkills(cid, req.skillIds));
+    sendJson(ws, S.KNIGHTHOOD_SET_ACTIVE_RSP, knighthood.doQuest(cid, req.questId || 1));
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 

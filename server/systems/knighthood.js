@@ -3,207 +3,147 @@
 const db = require('../db');
 
 const OPCODES = {
-  C_KNIGHTHOOD_INFO:     0x8300,
-  S_KNIGHTHOOD_INFO:     0x8310,
-  C_KNIGHTHOOD_UPGRADE:  0x8301,
-  S_KNIGHTHOOD_UPGRADE:  0x8311,
-  C_KNIGHTHOOD_SKILL:    0x8302,
-  S_KNIGHTHOOD_SKILL:    0x8312,
-  C_KNIGHTHOOD_SET_ACTIVE: 0x8303,
-  S_KNIGHTHOOD_SET_ACTIVE: 0x8313,
+  C_KNIGHTHOOD_INFO:    0x8300,
+  S_KNIGHTHOOD_INFO:    0x8310,
+  C_KNIGHTHOOD_RECRUIT: 0x8301,
+  S_KNIGHTHOOD_RECRUIT: 0x8311,
+  C_KNIGHTHOOD_TRAIN:   0x8302,
+  S_KNIGHTHOOD_TRAIN:   0x8312,
+  C_KNIGHTHOOD_QUEST:   0x8304,
+  S_KNIGHTHOOD_QUEST:   0x8314,
+  C_KNIGHTHOOD_SHOP:    0x8305,
+  S_KNIGHTHOOD_SHOP:    0x8315,
 };
 
-const MIN_LEVEL = 80;
+const MAX_KNIGHTS = 6;
+const UNLOCK_LEVEL = 45;
+const DAILY_QUESTS = 3;
+const MAX_KNIGHT_LEVEL = 50;
+const TRAIN_COST = 5000;
 
-const KH_LEVELS = {
-  1:  { expNeeded: 0,      title: 'Squire',           skillPoints: 1 },
-  2:  { expNeeded: 5000,   title: 'Page',             skillPoints: 1 },
-  3:  { expNeeded: 15000,  title: 'Man-at-Arms',      skillPoints: 2 },
-  4:  { expNeeded: 35000,  title: 'Cavalier',         skillPoints: 2 },
-  5:  { expNeeded: 70000,  title: 'Knight',            skillPoints: 3 },
-  6:  { expNeeded: 120000, title: 'Knight Captain',    skillPoints: 3 },
-  7:  { expNeeded: 200000, title: 'Knight Commander',  skillPoints: 4 },
-  8:  { expNeeded: 350000, title: 'Knight Lord',       skillPoints: 4 },
-  9:  { expNeeded: 600000, title: 'Grand Knight',      skillPoints: 5 },
-  10: { expNeeded: 1000000,title: 'Sovereign Knight',  skillPoints: 5 },
-};
+const KNIGHT_TEMPLATES = [
+  { id: 1, name: 'Sir Galahad',   class: 'knight', basePower: 500,  cost: 50000 },
+  { id: 2, name: 'Lady Morgana',  class: 'mage',   basePower: 480,  cost: 50000 },
+  { id: 3, name: 'Robin',         class: 'archer', basePower: 490,  cost: 50000 },
+  { id: 4, name: 'Sir Lancelot',  class: 'knight', basePower: 700,  cost: 100000 },
+  { id: 5, name: 'Merlin',        class: 'mage',   basePower: 720,  cost: 100000 },
+  { id: 6, name: 'Artemis',       class: 'archer', basePower: 710,  cost: 100000 },
+  { id: 7, name: 'Titan Guard',   class: 'knight', basePower: 1000, cost: 200000 },
+  { id: 8, name: 'Archmage',      class: 'mage',   basePower: 1050, cost: 200000 },
+  { id: 9, name: 'Shadow Hunter', class: 'archer', basePower: 1020, cost: 200000 },
+];
 
-const KH_SKILLS = {
-  1: { name: 'Holy Strike',     type: 'active',  maxLevel: 10, stat: 'attack',        perLevel: 80,  costPerLevel: 1 },
-  2: { name: 'Divine Shield',   type: 'active',  maxLevel: 10, stat: 'defence',       perLevel: 60,  costPerLevel: 1 },
-  3: { name: 'Sacred Flame',    type: 'active',  maxLevel: 10, stat: 'magic_attack',  perLevel: 70,  costPerLevel: 1 },
-  4: { name: 'Aegis Blessing',  type: 'active',  maxLevel: 10, stat: 'max_hp',        perLevel: 500, costPerLevel: 1 },
-  5: { name: 'Iron Will',       type: 'passive', maxLevel: 10, stat: 'defence',       perLevel: 40,  costPerLevel: 1 },
-  6: { name: 'Vitality',        type: 'passive', maxLevel: 10, stat: 'max_hp',        perLevel: 300, costPerLevel: 1 },
-  7: { name: 'Precision',       type: 'passive', maxLevel: 10, stat: 'crit_rate',     perLevel: 50,  costPerLevel: 1 },
-  8: { name: 'Resilience',      type: 'passive', maxLevel: 10, stat: 'magic_defence', perLevel: 40,  costPerLevel: 1 },
-};
+const KH_QUESTS = [
+  { id: 1, name: 'Patrol the Realm',   reward: { gold: 10000, khExp: 20 } },
+  { id: 2, name: 'Gather Resources',   reward: { gold: 8000,  khExp: 15 } },
+  { id: 3, name: 'Defend the Gate',    reward: { gold: 15000, khExp: 30 } },
+  { id: 4, name: 'Hunt Bandits',       reward: { gold: 12000, khExp: 25 } },
+  { id: 5, name: 'Escort the Caravan', reward: { gold: 20000, khExp: 40 } },
+];
 
-const MAX_ACTIVE_SLOTS = 4;
+const KH_SHOP = [
+  { id: 1, name: 'Knight EXP Scroll', cost: 100 },
+  { id: 2, name: 'Knight Armor',      cost: 200 },
+  { id: 3, name: 'Knight Weapon',     cost: 300 },
+  { id: 4, name: 'Power Potion',      cost: 150 },
+  { id: 5, name: 'Gold Chest',        cost: 500 },
+];
 
 function initDB() {
   db.getDatabase().exec(`
     CREATE TABLE IF NOT EXISTS knighthood (
-      char_id       INTEGER PRIMARY KEY REFERENCES characters(id),
-      kh_level      INTEGER DEFAULT 1,
-      kh_exp        INTEGER DEFAULT 0,
-      skill_points  INTEGER DEFAULT 1,
-      active_skills TEXT DEFAULT '[]'
+      char_id    INTEGER PRIMARY KEY REFERENCES characters(id),
+      kh_level   INTEGER DEFAULT 1,
+      kh_exp     INTEGER DEFAULT 0,
+      kh_points  INTEGER DEFAULT 0,
+      quests_done INTEGER DEFAULT 0,
+      quest_date TEXT DEFAULT ''
     );
-    CREATE TABLE IF NOT EXISTS knighthood_skills (
-      id        INTEGER PRIMARY KEY AUTOINCREMENT,
-      char_id   INTEGER NOT NULL REFERENCES characters(id),
-      skill_id  INTEGER NOT NULL,
-      level     INTEGER DEFAULT 0,
-      UNIQUE(char_id, skill_id)
+    CREATE TABLE IF NOT EXISTS knights (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      char_id     INTEGER NOT NULL REFERENCES characters(id),
+      template_id INTEGER NOT NULL,
+      level       INTEGER DEFAULT 1,
+      power       INTEGER DEFAULT 0,
+      slot        INTEGER DEFAULT 0
     );
   `);
 }
 
 function ensureEntry(charId) {
   db.getDatabase().prepare('INSERT OR IGNORE INTO knighthood (char_id) VALUES (?)').run(charId);
-  for (const skillId of Object.keys(KH_SKILLS)) {
-    db.getDatabase().prepare('INSERT OR IGNORE INTO knighthood_skills (char_id, skill_id) VALUES (?, ?)').run(charId, parseInt(skillId));
-  }
 }
 
 function getKnighthoodInfo(charId) {
   const char = db.getCharacterById(charId);
-  if (!char) return { success: false };
-  if (char.grade < MIN_LEVEL) return { success: false, msg: 'Level ' + MIN_LEVEL + ' required' };
-
+  if (!char || char.grade < UNLOCK_LEVEL) return { success: false, msg: 'Reach level ' + UNLOCK_LEVEL };
   ensureEntry(charId);
   const kh = db.getDatabase().prepare('SELECT * FROM knighthood WHERE char_id = ?').get(charId);
-  const skills = db.getDatabase().prepare('SELECT * FROM knighthood_skills WHERE char_id = ?').all(charId);
-  const levelInfo = KH_LEVELS[kh.kh_level];
-  const nextLevel = KH_LEVELS[kh.kh_level + 1];
-
-  let activeSkills = [];
-  try { activeSkills = JSON.parse(kh.active_skills); } catch (e) { /* empty */ }
-
+  const knights = db.getDatabase().prepare('SELECT * FROM knights WHERE char_id = ? ORDER BY slot').all(charId);
+  const today = new Date().toISOString().slice(0, 10);
   return {
-    success: true,
-    level: kh.kh_level,
-    exp: kh.kh_exp,
-    expNeeded: nextLevel ? nextLevel.expNeeded : null,
-    title: levelInfo.title,
-    skillPoints: kh.skill_points,
-    activeSkills,
-    skills: skills.map(s => {
-      const def = KH_SKILLS[s.skill_id];
-      return {
-        skillId: s.skill_id,
-        name: def.name,
-        type: def.type,
-        level: s.level,
-        maxLevel: def.maxLevel,
-        stat: def.stat,
-        bonus: def.perLevel * s.level,
-        upgradeCost: s.level < def.maxLevel ? def.costPerLevel : null,
-      };
-    }),
+    success: true, level: kh.kh_level, exp: kh.kh_exp, nextExp: kh.kh_level * 100, points: kh.kh_points,
+    questsDone: kh.quest_date === today ? kh.quests_done : 0, maxQuests: DAILY_QUESTS,
+    knights: knights.map(k => { const t = KNIGHT_TEMPLATES.find(tt => tt.id === k.template_id); return { id: k.id, name: t?.name, class: t?.class, level: k.level, power: k.power, slot: k.slot }; }),
+    availableRecruits: KNIGHT_TEMPLATES.filter(t => !knights.find(k => k.template_id === t.id)).map(t => ({ id: t.id, name: t.name, class: t.class, basePower: t.basePower, cost: t.cost })),
   };
 }
 
-function gainKhExp(charId, amount) {
+function recruitKnight(charId, templateId) {
   const char = db.getCharacterById(charId);
-  if (!char || char.grade < MIN_LEVEL) return { success: false };
-
+  if (!char || char.grade < UNLOCK_LEVEL) return { success: false, msg: 'Not unlocked' };
+  const tmpl = KNIGHT_TEMPLATES.find(t => t.id === templateId);
+  if (!tmpl) return { success: false, msg: 'Invalid knight' };
   ensureEntry(charId);
+  const knights = db.getDatabase().prepare('SELECT * FROM knights WHERE char_id = ?').all(charId);
+  if (knights.length >= MAX_KNIGHTS) return { success: false, msg: 'Max knights' };
+  if (knights.find(k => k.template_id === templateId)) return { success: false, msg: 'Already recruited' };
+  if (char.gold < tmpl.cost) return { success: false, msg: 'Not enough gold' };
+  db.getDatabase().prepare('UPDATE characters SET gold = gold - ? WHERE id = ?').run(tmpl.cost, charId);
+  db.getDatabase().prepare('INSERT INTO knights (char_id, template_id, level, power, slot) VALUES (?, ?, 1, ?, ?)').run(charId, templateId, tmpl.basePower, knights.length);
+  return { success: true, knight: { name: tmpl.name, class: tmpl.class, power: tmpl.basePower } };
+}
+
+function trainKnight(charId, knightId) {
+  const knight = db.getDatabase().prepare('SELECT * FROM knights WHERE id = ? AND char_id = ?').get(knightId, charId);
+  if (!knight) return { success: false, msg: 'Not found' };
+  if (knight.level >= MAX_KNIGHT_LEVEL) return { success: false, msg: 'Max level' };
+  const cost = TRAIN_COST * knight.level;
+  const char = db.getCharacterById(charId);
+  if (!char || char.gold < cost) return { success: false, msg: 'Not enough gold' };
+  const tmpl = KNIGHT_TEMPLATES.find(t => t.id === knight.template_id);
+  const newLevel = knight.level + 1;
+  const newPower = Math.floor((tmpl?.basePower || 500) * (1 + (newLevel - 1) * 0.15));
+  db.getDatabase().prepare('UPDATE characters SET gold = gold - ? WHERE id = ?').run(cost, charId);
+  db.getDatabase().prepare('UPDATE knights SET level = ?, power = ? WHERE id = ?').run(newLevel, newPower, knightId);
+  return { success: true, knightId, newLevel, newPower };
+}
+
+function doQuest(charId) {
+  ensureEntry(charId);
+  const today = new Date().toISOString().slice(0, 10);
   const kh = db.getDatabase().prepare('SELECT * FROM knighthood WHERE char_id = ?').get(charId);
-  let { kh_level, kh_exp, skill_points } = kh;
-
-  kh_exp += amount;
-  let leveled = false;
-
-  while (kh_level < 10) {
-    const next = KH_LEVELS[kh_level + 1];
-    if (!next || kh_exp < next.expNeeded) break;
-    kh_level++;
-    skill_points += KH_LEVELS[kh_level].skillPoints;
-    leveled = true;
-  }
-
-  db.getDatabase().prepare('UPDATE knighthood SET kh_level = ?, kh_exp = ?, skill_points = ? WHERE char_id = ?')
-    .run(kh_level, kh_exp, skill_points, charId);
-
-  return {
-    success: true,
-    level: kh_level,
-    exp: kh_exp,
-    skillPoints: skill_points,
-    leveled,
-    title: KH_LEVELS[kh_level].title,
-  };
+  const done = kh.quest_date === today ? kh.quests_done : 0;
+  if (done >= DAILY_QUESTS) return { success: false, msg: 'Done for today' };
+  const quest = KH_QUESTS[Math.floor(Math.random() * KH_QUESTS.length)];
+  db.getDatabase().prepare('UPDATE characters SET gold = gold + ? WHERE id = ?').run(quest.reward.gold, charId);
+  const newExp = kh.kh_exp + quest.reward.khExp;
+  let newLevel = kh.kh_level;
+  let remExp = newExp;
+  if (newExp >= kh.kh_level * 100) { newLevel++; remExp = newExp - kh.kh_level * 100; }
+  db.getDatabase().prepare('UPDATE knighthood SET kh_exp = ?, kh_level = ?, kh_points = kh_points + ?, quests_done = ?, quest_date = ? WHERE char_id = ?')
+    .run(remExp, newLevel, quest.reward.khExp, done + 1, today, charId);
+  return { success: true, quest: quest.name, reward: quest.reward, questsDone: done + 1 };
 }
 
-function upgradeKhSkill(charId, skillId) {
-  const def = KH_SKILLS[skillId];
-  if (!def) return { success: false, msg: 'Invalid skill' };
-
+function buyFromShop(charId, itemId) {
   ensureEntry(charId);
+  const item = KH_SHOP.find(i => i.id === itemId);
+  if (!item) return { success: false, msg: 'Invalid item' };
   const kh = db.getDatabase().prepare('SELECT * FROM knighthood WHERE char_id = ?').get(charId);
-  const skill = db.getDatabase().prepare('SELECT * FROM knighthood_skills WHERE char_id = ? AND skill_id = ?').get(charId, skillId);
-
-  if (skill.level >= def.maxLevel) return { success: false, msg: 'Skill already max level' };
-  if (kh.skill_points < def.costPerLevel) return { success: false, msg: 'Not enough skill points' };
-
-  db.getDatabase().prepare('UPDATE knighthood_skills SET level = level + 1 WHERE char_id = ? AND skill_id = ?')
-    .run(charId, skillId);
-  db.getDatabase().prepare('UPDATE knighthood SET skill_points = skill_points - ? WHERE char_id = ?')
-    .run(def.costPerLevel, charId);
-
-  return {
-    success: true,
-    skillId,
-    newLevel: skill.level + 1,
-    bonus: def.perLevel * (skill.level + 1),
-    remainingPoints: kh.skill_points - def.costPerLevel,
-  };
+  if (kh.kh_points < item.cost) return { success: false, msg: 'Not enough points' };
+  db.getDatabase().prepare('UPDATE knighthood SET kh_points = kh_points - ? WHERE char_id = ?').run(item.cost, charId);
+  return { success: true, item: item.name };
 }
 
-function getActiveSkills(charId) {
-  ensureEntry(charId);
-  const kh = db.getDatabase().prepare('SELECT active_skills FROM knighthood WHERE char_id = ?').get(charId);
-  try { return JSON.parse(kh.active_skills); } catch (e) { return []; }
-}
-
-function setActiveSkills(charId, skillIds) {
-  if (!Array.isArray(skillIds)) return { success: false, msg: 'Invalid skill list' };
-  if (skillIds.length > MAX_ACTIVE_SLOTS) return { success: false, msg: 'Max ' + MAX_ACTIVE_SLOTS + ' active skills' };
-
-  for (const sid of skillIds) {
-    const def = KH_SKILLS[sid];
-    if (!def || def.type !== 'active') return { success: false, msg: 'Skill ' + sid + ' is not an active skill' };
-  }
-
-  const unique = [...new Set(skillIds)];
-  ensureEntry(charId);
-  db.getDatabase().prepare('UPDATE knighthood SET active_skills = ? WHERE char_id = ?')
-    .run(JSON.stringify(unique), charId);
-
-  return { success: true, activeSkills: unique };
-}
-
-function getKnighthoodBonuses(charId) {
-  ensureEntry(charId);
-  const skills = db.getDatabase().prepare('SELECT * FROM knighthood_skills WHERE char_id = ? AND level > 0').all(charId);
-  const bonuses = { attack: 0, defence: 0, max_hp: 0, magic_attack: 0, magic_defence: 0, crit_rate: 0 };
-
-  for (const s of skills) {
-    const def = KH_SKILLS[s.skill_id];
-    if (!def) continue;
-    if (bonuses[def.stat] !== undefined) {
-      bonuses[def.stat] += def.perLevel * s.level;
-    }
-  }
-
-  return bonuses;
-}
-
-module.exports = {
-  OPCODES, KH_LEVELS, KH_SKILLS, MIN_LEVEL, MAX_ACTIVE_SLOTS,
-  initDB,
-  getKnighthoodInfo, gainKhExp, upgradeKhSkill,
-  getActiveSkills, setActiveSkills, getKnighthoodBonuses,
-};
+module.exports = { OPCODES, KNIGHT_TEMPLATES, KH_QUESTS, KH_SHOP, MAX_KNIGHTS, UNLOCK_LEVEL, initDB, getKnighthoodInfo, recruitKnight, trainKnight, doQuest, buyFromShop };

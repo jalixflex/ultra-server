@@ -143,7 +143,7 @@ purgatoryMaze.initDB();
 archaeology.initDB();
 crossServer.initDB();
 tutorial.initDB();
-console.log('[DB] Database ready (56 systems).');
+console.log('[DB] Database ready (58 systems).');
 
 // ─── Create HTTP Server ──────────────────
 const httpHandler = createHttpHandler(config);
@@ -211,12 +211,12 @@ server.listen(PORT, HOST, () => {
   console.log(`║  HTTP + WS : ${HOST}:${PORT}                    ║`);
   console.log(`║  Public    : ${PUBLIC_HOST}:${PORT}              ║`);
   console.log('║  Database  : SQLite (data/wartune.db)        ║');
-  console.log('║  56 Systems Loaded — Complete Edition        ║');
+  console.log('║  58 Systems Loaded — Complete Edition        ║');
   console.log('║  Core: Login, Chat, Battle, Inventory        ║');
   console.log('║  Social: Guild, Mail, Friends, Party, Social ║');
   console.log('║  Quest: Story, Bounty, Devotion, Circuit     ║');
   console.log('║  World: Campaign, World Boss, Catacombs, Map ║');
-  console.log('║  PvP: Arena, BG, Honor, Ranking              ║');
+  console.log('║  PvP: Arena, BG, Honor, Ranking, Cross-Srv   ║');
   console.log('║  Progress: Skills, Wings, Academy, Forge     ║');
   console.log('║  Companion: Astral, Sylph, Mount, Troops     ║');
   console.log('║  Endgame: Talent, Rune, Dragon Soul, Spire   ║');
@@ -224,7 +224,9 @@ server.listen(PORT, HOST, () => {
   console.log('║  Gem, Resistance, Henna, Events, Gacha       ║');
   console.log('║  Economy: Shop, VIP, Farm, City, Clothing    ║');
   console.log('║  Extras: Guild War/Altar/Beast, Jewel Hunt   ║');
-  console.log('║  Class Advance, Daily Login, Feature Unlock  ║');
+  console.log('║  Cloud Adventure, Purgatory Maze, Archaeology║');
+  console.log('║  Knighthood, Tutorial, Class Advance         ║');
+  console.log('║  Daily Login, Feature Unlock, Buff           ║');
   console.log('╚══════════════════════════════════════════════╝');
   console.log('');
 });
