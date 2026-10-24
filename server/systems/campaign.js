@@ -8,6 +8,8 @@ const OPCODES = {
   C_CAMPAIGN_ENTER: 0x426A,
   S_CAMPAIGN_RESULT:0x4274,
   C_CAMPAIGN_SWEEP: 0x426B,
+  C_CAMPAIGN_BLITZ: 0x426C,
+  S_CAMPAIGN_BLITZ: 0x4275,
 };
 
 const STAMINA_PER_RUN = 20;
@@ -365,8 +367,56 @@ function sweep(charId, stageId, count = 1) {
   return { success: true, count, rewards: { exp: totalExp, gold: totalGold } };
 }
 
+function blitzStage(charId, stageId, count = 1) {
+  const char = db.getCharacterById(charId);
+  if (!char) return { success: false, msg: 'Character not found' };
+
+  const progress = db.getDatabase()
+    .prepare('SELECT * FROM campaign_progress WHERE char_id = ? AND stage_id = ?')
+    .get(charId, stageId);
+  if (!progress || progress.clears < 1) return { success: false, msg: 'Clear the stage first' };
+
+  const stage = findStage(stageId);
+  if (!stage) return { success: false, msg: 'Invalid stage' };
+
+  count = Math.max(1, Math.min(count, 10));
+  const goldCost = 500 * count;
+  if (char.gold < goldCost) return { success: false, msg: 'Not enough gold' };
+
+  db.getDatabase().prepare('UPDATE characters SET gold = gold - ? WHERE id = ?').run(goldCost, charId);
+
+  let totalExp = 0, totalGold = 0;
+  for (let i = 0; i < count; i++) {
+    for (const m of stage.monsters) { totalExp += m.exp; totalGold += m.gold; }
+    totalExp += stage.boss.exp;
+    totalGold += stage.boss.gold;
+  }
+
+  db.getDatabase().prepare('UPDATE characters SET exp = exp + ?, gold = gold + ? WHERE id = ?')
+    .run(totalExp, totalGold, charId);
+  db.getDatabase().prepare('UPDATE campaign_progress SET clears = clears + ? WHERE char_id = ? AND stage_id = ?')
+    .run(count, charId, stageId);
+
+  const allDrops = [];
+  try {
+    const inventoryMod = require('./inventory');
+    const battleMod = require('./battle');
+    for (let i = 0; i < count; i++) {
+      const drops = battleMod.generateDrops ? battleMod.generateDrops(stage.monsters, char.grade) : [];
+      for (const drop of drops) {
+        inventoryMod.addItem(charId, drop.itemId, drop.count, drop.quality || 0);
+        allDrops.push(drop);
+      }
+    }
+  } catch (e) { /* drop generation optional */ }
+
+  try { require('./quest').checkLevelUp(charId); } catch (e) {}
+
+  return { success: true, count, rewards: { exp: totalExp, gold: totalGold, drops: allDrops } };
+}
+
 module.exports = {
   OPCODES, CHAPTERS, STAMINA_PER_RUN, STAMINA_CAP,
   initDB, getAllStages, findStage, getStages, getStamina,
-  enterStage, sweep,
+  enterStage, sweep, blitzStage,
 };

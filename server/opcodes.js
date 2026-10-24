@@ -32,6 +32,10 @@ const C = {
   CAMPAIGN_LIST:       0x4269,
   CAMPAIGN_ENTER:      0x426A,
   CAMPAIGN_SWEEP:      0x426B,
+  CAMPAIGN_BLITZ:      0x426C,
+
+  // Player inspect
+  INSPECT_PLAYER:      0x9903,
 
   // Guild
   GUILD_INFO:          0x4650,
@@ -385,6 +389,10 @@ const S = {
   BATTLE_END:            0x4272,
   CAMPAIGN_LIST_RSP:     0x4273,
   CAMPAIGN_RESULT:       0x4274,
+  CAMPAIGN_BLITZ_RSP:    0x4275,
+
+  // Player inspect
+  INSPECT_RESULT:        0x9904,
 
   // Guild
   GUILD_INFO_RSP:        0x4660,

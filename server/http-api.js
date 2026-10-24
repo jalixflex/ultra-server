@@ -71,6 +71,14 @@ function jsonResponse(res, statusCode, data) {
   res.end(body);
 }
 
+// ─── GM Authentication ────────────────────
+const GM_TOKEN = process.env.GM_TOKEN || 'wartune-admin-2024';
+
+function isGM(req) {
+  const auth = req.headers['authorization'] || '';
+  return auth === `Bearer ${GM_TOKEN}`;
+}
+
 function createHttpHandler(config) {
   const webrootPath = config.webroot || path.join(__dirname, '..', 'webroot_web');
 
@@ -79,8 +87,8 @@ function createHttpHandler(config) {
     if (req.method === 'OPTIONS') {
       res.writeHead(200, {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       });
       return res.end();
     }
@@ -182,6 +190,127 @@ function createHttpHandler(config) {
       if (req.method === 'POST' && !pathname.startsWith('/api/')) {
         res.writeHead(200, { 'Content-Type': 'application/xml' });
         return res.end('<Result><value>true</value></Result>');
+      }
+
+      // ─── GM: Announce ─────────────────────
+      if (pathname === '/api/gm/announce' && req.method === 'POST') {
+        if (!isGM(req)) return jsonResponse(res, 403, { error: 'Unauthorized' });
+        const { message } = JSON.parse((await readBody(req)).toString());
+        const wss = global.__wss;
+        let sent = 0;
+        if (wss) {
+          const chat = require('./systems/chat');
+          for (const client of wss.clients) {
+            if (client.readyState === 1) {
+              try { chat.sendSystemNotice(client, message); sent++; } catch (e) { /* skip */ }
+            }
+          }
+        }
+        return jsonResponse(res, 200, { ok: true, sent });
+      }
+
+      // ─── GM: Give Item ──────────────────────
+      if (pathname === '/api/gm/give-item' && req.method === 'POST') {
+        if (!isGM(req)) return jsonResponse(res, 403, { error: 'Unauthorized' });
+        const { charId, itemId, count, quality } = JSON.parse((await readBody(req)).toString());
+        const inventory = require('./systems/inventory');
+        const item = inventory.addItem(charId, itemId, count || 1, quality || 0);
+        return jsonResponse(res, 200, { ok: !!item, item });
+      }
+
+      // ─── GM: Give Currency ──────────────────
+      if (pathname === '/api/gm/give-currency' && req.method === 'POST') {
+        if (!isGM(req)) return jsonResponse(res, 403, { error: 'Unauthorized' });
+        const { charId, type, amount } = JSON.parse((await readBody(req)).toString());
+        const validTypes = ['gold', 'balens', 'bound_balens'];
+        if (!validTypes.includes(type)) return jsonResponse(res, 400, { ok: false, error: 'Invalid type' });
+        db.getDatabase().prepare(`UPDATE characters SET ${type} = ${type} + ? WHERE id = ?`).run(amount, charId);
+        return jsonResponse(res, 200, { ok: true });
+      }
+
+      // ─── GM: Ban Account ───────────────────
+      if (pathname === '/api/gm/ban' && req.method === 'POST') {
+        if (!isGM(req)) return jsonResponse(res, 403, { error: 'Unauthorized' });
+        const { accountId, reason } = JSON.parse((await readBody(req)).toString());
+        db.banAccount(accountId, reason || 'GM ban');
+        return jsonResponse(res, 200, { ok: true });
+      }
+
+      // ─── GM: Kick Player ───────────────────
+      if (pathname === '/api/gm/kick' && req.method === 'POST') {
+        if (!isGM(req)) return jsonResponse(res, 403, { error: 'Unauthorized' });
+        const { charId } = JSON.parse((await readBody(req)).toString());
+        const clients = global.__clients;
+        if (clients && clients.has(charId)) {
+          clients.get(charId).close();
+          return jsonResponse(res, 200, { ok: true, kicked: true });
+        }
+        return jsonResponse(res, 200, { ok: true, kicked: false, msg: 'Player not online' });
+      }
+
+      // ─── GM: Online Players ─────────────────
+      if (pathname === '/api/gm/online' && req.method === 'GET') {
+        if (!isGM(req)) return jsonResponse(res, 403, { error: 'Unauthorized' });
+        const clients = global.__clients;
+        const players = [];
+        if (clients) {
+          for (const [cid, client] of clients) {
+            const char = db.getCharacterById(cid);
+            if (char) players.push({ charId: char.id, name: char.nick_name, level: char.grade, fighting: char.fighting });
+          }
+        }
+        return jsonResponse(res, 200, { ok: true, count: players.length, players });
+      }
+
+      // ─── GM: Set Level ──────────────────────
+      if (pathname === '/api/gm/set-level' && req.method === 'POST') {
+        if (!isGM(req)) return jsonResponse(res, 403, { error: 'Unauthorized' });
+        const { charId, level } = JSON.parse((await readBody(req)).toString());
+        db.updateCharacter(charId, { grade: level, exp: 0 });
+        require('./systems/inventory').recalcStats(charId);
+        return jsonResponse(res, 200, { ok: true });
+      }
+
+      // ─── GM: Player Info ────────────────────
+      if (pathname.startsWith('/api/gm/player/') && req.method === 'GET') {
+        if (!isGM(req)) return jsonResponse(res, 403, { error: 'Unauthorized' });
+        const cid = parseInt(pathname.split('/').pop());
+        const char = db.getCharacterById(cid);
+        if (!char) return jsonResponse(res, 404, { ok: false, error: 'Not found' });
+        return jsonResponse(res, 200, { ok: true, player: char });
+      }
+
+      // ─── GM: Create Gift Code ───────────────
+      if (pathname === '/api/gm/create-gift-code' && req.method === 'POST') {
+        if (!isGM(req)) return jsonResponse(res, 403, { error: 'Unauthorized' });
+        const { code, rewards, maxUses, expiresAt } = JSON.parse((await readBody(req)).toString());
+        const giftCode = require('./systems/gift-code');
+        const result = giftCode.createCode(code, rewards, maxUses, expiresAt);
+        return jsonResponse(res, 200, result);
+      }
+
+      // ─── GM: List Gift Codes ────────────────
+      if (pathname === '/api/gm/gift-codes' && req.method === 'GET') {
+        if (!isGM(req)) return jsonResponse(res, 403, { error: 'Unauthorized' });
+        const giftCode = require('./systems/gift-code');
+        return jsonResponse(res, 200, { ok: true, codes: giftCode.listCodes() });
+      }
+
+      // ─── GM: Create Event ───────────────────
+      if (pathname === '/api/gm/create-event' && req.method === 'POST') {
+        if (!isGM(req)) return jsonResponse(res, 403, { error: 'Unauthorized' });
+        const { templateId, duration } = JSON.parse((await readBody(req)).toString());
+        const evts = require('./systems/events');
+        const eventId = evts.createEvent(templateId, duration);
+        if (!eventId) return jsonResponse(res, 400, { ok: false, error: 'Invalid template' });
+        return jsonResponse(res, 200, { ok: true, eventId });
+      }
+
+      // ─── GM: List Events ───────────────────
+      if (pathname === '/api/gm/events' && req.method === 'GET') {
+        if (!isGM(req)) return jsonResponse(res, 403, { error: 'Unauthorized' });
+        const evts = require('./systems/events');
+        return jsonResponse(res, 200, { ok: true, ...evts.getActiveEvents(), templates: evts.EVENT_TEMPLATES });
       }
 
       // ─── Static file serving ────────────

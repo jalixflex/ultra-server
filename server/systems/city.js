@@ -119,6 +119,7 @@ function ensureBuildings(charId) {
 
 function getCityInfo(charId) {
   ensureBuildings(charId);
+  checkBuildComplete(charId);
   const rows = db.getDatabase()
     .prepare('SELECT * FROM city_buildings WHERE char_id = ?')
     .all(charId);
@@ -174,16 +175,56 @@ function upgradeBuilding(charId, buildingId) {
 
   db.updateCharacter(charId, { gold: char.gold - cost });
 
-  const time = b.timeSec(row.level + 1);
+  let time = b.timeSec(row.level + 1);
+  try {
+    const vipLevel = char.vip_level || 0;
+    if (vipLevel > 0) time = Math.floor(time * (1 - vipLevel * 0.05));
+  } catch(e) {}
+  time = Math.max(10, time);
+
   const until = now + time;
-
-  // Instant upgrade for now (can add timer later)
   db.getDatabase().prepare(`
-    UPDATE city_buildings SET level = level + 1, upgrading_until = 0
+    UPDATE city_buildings SET upgrading_until = ?
     WHERE char_id = ? AND building_id = ?
-  `).run(charId, buildingId);
+  `).run(until, charId, buildingId);
 
-  return { success: true, building: buildingId, level: row.level + 1, effect: b.effect(row.level + 1) };
+  return { success: true, building: buildingId, targetLevel: row.level + 1, endTime: until, buildTime: time };
+}
+
+function checkBuildComplete(charId) {
+  const rows = db.getDatabase()
+    .prepare('SELECT * FROM city_buildings WHERE char_id = ? AND upgrading_until > 0')
+    .all(charId);
+  const now = Math.floor(Date.now() / 1000);
+  const completed = [];
+  for (const r of rows) {
+    if (r.upgrading_until <= now) {
+      db.getDatabase().prepare('UPDATE city_buildings SET level = level + 1, upgrading_until = 0 WHERE char_id = ? AND building_id = ?')
+        .run(charId, r.building_id);
+      completed.push({ buildingId: r.building_id, newLevel: r.level + 1 });
+    }
+  }
+  return completed;
+}
+
+function speedUpBuild(charId, buildingId) {
+  const row = db.getDatabase()
+    .prepare('SELECT * FROM city_buildings WHERE char_id = ? AND building_id = ? AND upgrading_until > 0')
+    .get(charId, buildingId);
+  if (!row) return { success: false, msg: 'Not upgrading' };
+
+  const now = Math.floor(Date.now() / 1000);
+  const remaining = Math.max(0, row.upgrading_until - now);
+  const balensCost = Math.ceil(remaining / 60) * 5;
+
+  const char = db.getCharacterById(charId);
+  if (char.balens < balensCost) return { success: false, msg: 'Not enough balens' };
+
+  db.updateCharacter(charId, { balens: char.balens - balensCost });
+  db.getDatabase().prepare('UPDATE city_buildings SET level = level + 1, upgrading_until = 0 WHERE char_id = ? AND building_id = ?')
+    .run(charId, buildingId);
+
+  return { success: true, buildingId, newLevel: row.level + 1, cost: balensCost };
 }
 
 function collectGold(charId) {
@@ -219,4 +260,5 @@ function collectGold(charId) {
 module.exports = {
   OPCODES, BUILDINGS,
   initDB, getCityInfo, upgradeBuilding, collectGold,
+  checkBuildComplete, speedUpBuild,
 };

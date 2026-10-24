@@ -70,6 +70,7 @@ const archaeology = require('./systems/archaeology');
 const crossServer = require('./systems/cross-server');
 const tutorial = require('./systems/tutorial');
 const featureUnlock = require('./systems/feature-unlock');
+const giftCode = require('./systems/gift-code');
 
 /**
  * Per-connection state stored on the ws object:
@@ -560,6 +561,16 @@ HANDLERS[C.CAMPAIGN_SWEEP] = (ws, body) => {
     const result = campaign.sweep(cid, req.stageId, req.count || 1);
     sendJson(ws, S.CAMPAIGN_RESULT, result);
   } catch (e) { sendSimpleResult(ws, false, 'Sweep error'); }
+};
+
+HANDLERS[C.CAMPAIGN_BLITZ] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = campaign.blitzStage(cid, req.stageId, req.count || 1);
+    sendJson(ws, S.CAMPAIGN_BLITZ_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Blitz error'); }
 };
 
 // ─── Guild ──────────────────────────────────
@@ -2286,6 +2297,54 @@ HANDLERS[C.TUTORIAL_SKIP] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
   sendJson(ws, S.TUTORIAL_SKIP_RSP, tutorial.skipTutorial(cid));
+};
+
+// ─── Player Inspection ─────────────────────────
+HANDLERS[C.INSPECT_PLAYER] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const targetId = req.targetId;
+    const target = db.getCharacterById(targetId);
+    if (!target) return sendSimpleResult(ws, false, 'Player not found');
+
+    const equipped = inventory.getEquippedItems(targetId);
+    const targetGuild = guild.getPlayerGuild(targetId);
+
+    sendJson(ws, S.INSPECT_RESULT, {
+      charId: target.id,
+      nickName: target.nick_name,
+      grade: target.grade,
+      job: target.job,
+      sex: target.sex,
+      fighting: target.fighting || 0,
+      attack: target.attack,
+      defence: target.defence,
+      hp: target.max_hp,
+      magicAttack: target.magic_attack,
+      magicDefence: target.magic_defence,
+      vipLevel: target.vip_level || 0,
+      guildName: targetGuild ? targetGuild.name : '',
+      equipment: equipped.map(e => ({
+        itemId: e.item_id,
+        slot: e.equip_slot,
+        enhance: e.enhance,
+        quality: e.quality,
+      })),
+    });
+  } catch (e) { sendSimpleResult(ws, false, 'Inspect error'); }
+};
+
+// ─── Gift Code Redemption ─────────────────────────
+HANDLERS[0x9A00] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = giftCode.redeemCode(cid, req.code || '');
+    sendJson(ws, 0x9A10, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Code error'); }
 };
 
 module.exports = { handlePacket, sendPacket };
