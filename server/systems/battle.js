@@ -94,7 +94,7 @@ const TROOP_COMBAT = {
 };
 
 function getClassSkills(job) {
-  const classMap = { 0: 'knight', 1: 'mage', 2: 'archer' };
+  const classMap = { 1: 'knight', 2: 'mage', 3: 'archer' };
   return CLASS_SKILLS[classMap[job]] || CLASS_SKILLS.knight;
 }
 

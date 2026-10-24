@@ -318,6 +318,7 @@ function checkLevelUp(charId) {
     db.getDatabase().prepare('UPDATE characters SET grade = ?, exp = exp - ? WHERE id = ?')
       .run(newLevel, expNeeded, charId);
     require('./inventory').recalcStats(charId);
+    try { require('./ranking').updatePlayerRanking(charId); } catch (e) {}
     checkLevelUp(charId);
   }
 }

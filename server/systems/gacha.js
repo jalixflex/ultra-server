@@ -157,7 +157,8 @@ function pull(charId, bannerId, useFree) {
   if (prize.type === 'bound_balens') db.getDatabase().prepare('UPDATE characters SET bound_balens = bound_balens + ? WHERE id = ?').run(amount, charId);
   if (prize.type === 'item') {
     try {
-      const itemId = typeof prize.itemId === 'number' ? prize.itemId : (100100 + Math.floor(Math.random() * 50));
+      const GACHA_ITEM_MAP = { gem_random_1: 300001, gem_random_3: 300003, gem_random_7: 300007, mount_whip: 400001, mount_card: 400002, sylph_shard: 500001 };
+      const itemId = typeof prize.itemId === 'number' ? prize.itemId : (GACHA_ITEM_MAP[prize.itemId] || 100100);
       getInventory().addItem(charId, itemId, amount, 0, 0);
     } catch (e) { console.error('[GACHA] Failed to add item:', e.message); }
   }

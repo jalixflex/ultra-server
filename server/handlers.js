@@ -86,6 +86,18 @@ function sendPacket(ws, cmdId, body = null, clientId = 0) {
   ws.send(pkt);
 }
 
+function requireFeature(ws, feature) {
+  const cid = ws.session?.charId;
+  if (!cid) return false;
+  const char = db.getCharacterById(cid);
+  if (!char) return false;
+  if (!featureUnlock.isFeatureUnlocked(char.grade, feature)) {
+    sendSimpleResult(ws, false, `Feature locked (requires higher level)`);
+    return false;
+  }
+  return true;
+}
+
 /**
  * Route a decoded packet to the appropriate handler.
  */
@@ -561,6 +573,7 @@ HANDLERS[C.GUILD_INFO] = (ws) => {
 HANDLERS[C.GUILD_CREATE] = (ws, body) => {
   const cid = charId(ws);
   if (!cid) return;
+  if (!requireFeature(ws, 'guild')) return;
   try {
     const req = JSON.parse(body.toString());
     const result = guild.createGuild(cid, req.name);
@@ -710,6 +723,7 @@ HANDLERS[C.VIP_INFO] = (ws) => {
 HANDLERS[C.ASTRAL_LIST] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
+  if (!requireFeature(ws, 'astral')) return;
   const list = astral.getAstrals(cid);
   sendJson(ws, S.ASTRAL_LIST_RSP, { astrals: list });
 };
@@ -756,6 +770,7 @@ HANDLERS[C.ASTRAL_UNEQUIP] = (ws, body) => {
 HANDLERS[C.SYLPH_LIST] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
+  if (!requireFeature(ws, 'sylph')) return;
   const list = sylph.getSylphs(cid);
   sendJson(ws, S.SYLPH_LIST_RSP, { sylphs: list });
 };
@@ -861,6 +876,7 @@ HANDLERS[C.TROOP_EQUIP] = (ws, body) => {
 HANDLERS[C.ARENA_INFO] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
+  if (!requireFeature(ws, 'arena')) return;
   const info = arena.getArenaInfo(cid);
   const opponents = arena.getOpponents(cid);
   sendJson(ws, S.ARENA_INFO_RSP, { info, opponents });
@@ -924,6 +940,7 @@ HANDLERS[C.FARM_STEAL] = (ws, body) => {
 HANDLERS[C.ACADEMY_LIST] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
+  if (!requireFeature(ws, 'academy')) return;
   const techs = academy.getTechLevels(cid);
   sendJson(ws, S.ACADEMY_LIST_RSP, { technologies: techs });
 };
@@ -935,6 +952,7 @@ HANDLERS[C.ACADEMY_RESEARCH] = (ws, body) => {
     const req = JSON.parse(body.toString());
     const result = academy.research(cid, req.techId);
     sendJson(ws, S.ACADEMY_RESEARCH_RSP, result);
+    if (result.success) { try { quest.updateProgress(cid, 'research_tech', 'any'); } catch(e) {} }
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
@@ -1095,6 +1113,7 @@ HANDLERS[C.CITY_COLLECT] = (ws) => {
 HANDLERS[C.BOUNTY_LIST] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
+  if (!requireFeature(ws, 'bounty_quests')) return;
   const info = bounty.getBountyInfo(cid);
   sendJson(ws, S.BOUNTY_LIST_RSP, info);
 };
@@ -1157,6 +1176,7 @@ HANDLERS[C.LOGIN_REWARD_CLAIM] = (ws) => {
 HANDLERS[C.WORLD_BOSS_INFO] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
+  if (!requireFeature(ws, 'world_boss')) return;
   const info = worldBoss.getBossInfo(cid);
   sendJson(ws, S.WORLD_BOSS_INFO_RSP, info);
 };
@@ -1179,6 +1199,7 @@ HANDLERS[C.WORLD_BOSS_RANK] = (ws) => {
 HANDLERS[C.CATACOMBS_INFO] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
+  if (!requireFeature(ws, 'forgotten_catacombs')) return;
   const info = catacombs.getInfo(cid);
   sendJson(ws, S.CATACOMBS_INFO_RSP, info);
 };

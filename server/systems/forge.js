@@ -34,12 +34,15 @@ const GEM_TYPES = [
  * Enchant: increase item enhance level. Gold cost, chance of failure at high levels.
  */
 function enchantItem(charId, itemDbId) {
+  const char = db.getCharacterById(charId);
+  if (char && !require('./feature-unlock').isFeatureUnlocked(char.grade, 'blacksmith_enchant')) {
+    return { success: false, msg: 'Forge unlocks at level 10' };
+  }
+
   const item = db.getDatabase()
     .prepare('SELECT * FROM items WHERE id = ? AND char_id = ?')
     .get(itemDbId, charId);
   if (!item) return { success: false, msg: 'Item not found' };
-
-  const char = db.getCharacterById(charId);
   const cost = 500 * (item.enhance + 1);
   if (char.gold < cost) return { success: false, msg: 'Not enough gold' };
 
