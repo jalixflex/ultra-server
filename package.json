@@ -1,0 +1,19 @@
+{
+  "name": "wartune-ultra-server",
+  "version": "1.0.0",
+  "description": "Wartune Ultra Game Server",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "protobufjs": "^8.8.1",
+    "ws": "^8.22.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "private": true
+}
