@@ -66,6 +66,30 @@ const DUNGEONS = [
     baseHp: 300000, baseAtk: 2500, baseDef: 1000,
     baseExp: 75000, baseGold: 50000, baseDaru: 12000,
   },
+  {
+    id: 7, name: 'Frozen Tomb', minLevel: 40,
+    bossName: 'Ice Lich King',
+    baseHp: 60000, baseAtk: 800, baseDef: 320,
+    baseExp: 16000, baseGold: 10000, baseDaru: 3000,
+  },
+  {
+    id: 8, name: 'Burning Pit', minLevel: 50,
+    bossName: 'Inferno Warden',
+    baseHp: 120000, baseAtk: 1300, baseDef: 520,
+    baseExp: 30000, baseGold: 20000, baseDaru: 5500,
+  },
+  {
+    id: 9, name: 'Shadow Throne', minLevel: 60,
+    bossName: 'Void King',
+    baseHp: 220000, baseAtk: 2000, baseDef: 800,
+    baseExp: 55000, baseGold: 38000, baseDaru: 9000,
+  },
+  {
+    id: 10, name: 'Divine Colosseum', minLevel: 75,
+    bossName: 'Titan Overlord',
+    baseHp: 500000, baseAtk: 3500, baseDef: 1400,
+    baseExp: 100000, baseGold: 70000, baseDaru: 18000,
+  },
 ];
 
 // In-memory party state (parties don't persist across restarts)

@@ -70,7 +70,7 @@ const archaeology = require('./systems/archaeology');
 const crossServer = require('./systems/cross-server');
 const tutorial = require('./systems/tutorial');
 const featureUnlock = require('./systems/feature-unlock');
-const title = require('./systems/title');
+const titles = require('./systems/titles');
 const giftCode = require('./systems/gift-code');
 
 /**
@@ -2352,7 +2352,7 @@ HANDLERS[0x9A00] = (ws, body) => {
 HANDLERS[C.TITLE_LIST] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  const info = title.getTitles(cid);
+  const info = titles.getTitles(cid);
   sendJson(ws, S.TITLE_LIST_RSP, info);
 };
 
@@ -2361,7 +2361,7 @@ HANDLERS[C.EQUIP_TITLE] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    const result = title.equipTitle(cid, req.titleId);
+    const result = titles.equipTitle(cid, req.titleId);
     sendJson(ws, S.EQUIP_TITLE_RSP, result);
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
