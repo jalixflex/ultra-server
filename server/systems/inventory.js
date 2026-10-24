@@ -249,6 +249,11 @@ function recalcStats(charId) {
     magic_defence: totalMDef,
     fighting: Math.floor(fighting),
   });
+
+  try {
+    const ranking = require('./ranking');
+    ranking.updatePlayerRanking(charId);
+  } catch (e) { /* ranking module may not be loaded */ }
 }
 
 /**

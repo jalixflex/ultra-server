@@ -101,4 +101,15 @@ function claimRankingReward(charId, category) {
   return { success: true, rank: row.rank_num, reward };
 }
 
-module.exports = { OPCODES, CATEGORIES, TOP_REWARDS, initDB, getRankingList, getSelfRank, claimRankingReward };
+function updatePlayerRanking(charId) {
+  const char = db.getCharacterById(charId);
+  if (!char) return;
+  const fighting = char.fighting || 0;
+  db.getDatabase().prepare(`
+    INSERT INTO ranking_rewards (char_id, category, week, rank_num)
+    VALUES (?, 'br', strftime('%Y-W%W','now'), 0)
+    ON CONFLICT(char_id, category, week) DO NOTHING
+  `).run(charId);
+}
+
+module.exports = { OPCODES, CATEGORIES, TOP_REWARDS, initDB, getRankingList, getSelfRank, claimRankingReward, updatePlayerRanking };

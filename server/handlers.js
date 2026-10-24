@@ -565,6 +565,9 @@ HANDLERS[C.GUILD_CREATE] = (ws, body) => {
     const req = JSON.parse(body.toString());
     const result = guild.createGuild(cid, req.name);
     sendJson(ws, S.GUILD_INFO_RSP, result);
+    if (result.success !== false) {
+      try { quest.updateProgress(cid, 'join_guild', 'any'); } catch(e) {}
+    }
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
@@ -575,6 +578,9 @@ HANDLERS[C.GUILD_JOIN] = (ws, body) => {
     const req = JSON.parse(body.toString());
     const result = guild.joinGuild(cid, req.guildId);
     sendSimpleResult(ws, result.success, result.msg);
+    if (result.success) {
+      try { quest.updateProgress(cid, 'join_guild', 'any'); } catch(e) {}
+    }
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
@@ -865,6 +871,7 @@ HANDLERS[C.ARENA_CHALLENGE] = (ws, body) => {
     const req = JSON.parse(body.toString());
     const result = arena.challenge(cid, req.targetId);
     sendJson(ws, S.ARENA_RESULT, result);
+    try { quest.updateProgress(cid, 'arena_battle', 'any'); } catch(e) {}
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 

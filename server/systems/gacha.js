@@ -1,6 +1,11 @@
 'use strict';
 
 const db = require('../db');
+let inventory = null;
+function getInventory() {
+  if (!inventory) inventory = require('./inventory');
+  return inventory;
+}
 
 const OPCODES = {
   C_GACHA_INFO:     0x8000,
@@ -145,6 +150,12 @@ function pull(charId, bannerId, useFree) {
   if (prize.type === 'gold') db.getDatabase().prepare('UPDATE characters SET gold = gold + ? WHERE id = ?').run(amount, charId);
   if (prize.type === 'exp') db.getDatabase().prepare('UPDATE characters SET exp = exp + ? WHERE id = ?').run(amount, charId);
   if (prize.type === 'bound_balens') db.getDatabase().prepare('UPDATE characters SET bound_balens = bound_balens + ? WHERE id = ?').run(amount, charId);
+  if (prize.type === 'item') {
+    try {
+      const itemId = typeof prize.itemId === 'number' ? prize.itemId : (100100 + Math.floor(Math.random() * 50));
+      getInventory().addItem(charId, itemId, amount, 0, 0);
+    } catch (e) { console.error('[GACHA] Failed to add item:', e.message); }
+  }
 
   db.getDatabase().prepare('INSERT INTO gacha_history (char_id, banner, prize_id, prize_name, rarity) VALUES (?, ?, ?, ?, ?)')
     .run(charId, bannerId, prize.id, prize.name, prize.rarity);

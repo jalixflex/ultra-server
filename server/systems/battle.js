@@ -3,6 +3,7 @@
 const { encode } = require('../proto');
 const { buildPacket } = require('../packet');
 const db = require('../db');
+const playerSkills = require('./skills');
 
 const OPCODES = {
   C_BATTLE_START:     0x1B58,
@@ -562,6 +563,18 @@ function endBattle(battleId, won) {
       goldReward += m.gold;
     }
 
+    // Apply VIP bonuses
+    try {
+      const vip = require('./vip');
+      const vipInfo = vip.getVipInfo(battle.player.charId);
+      if (vipInfo && vipInfo.expBonus > 0) {
+        expReward = Math.floor(expReward * (1 + vipInfo.expBonus / 100));
+      }
+      if (vipInfo && vipInfo.goldBonus > 0) {
+        goldReward = Math.floor(goldReward * (1 + vipInfo.goldBonus / 100));
+      }
+    } catch (e) { /* vip module may not exist */ }
+
     const char = db.getCharacterById(battle.player.charId);
     if (char) {
       const newExp = char.exp + expReward;
@@ -585,6 +598,14 @@ function endBattle(battleId, won) {
       const loot = generateDrops(battle.monsters, char.grade);
       drops.push(...loot);
 
+      // Add drops to inventory
+      try {
+        const inv = require('./inventory');
+        for (const drop of loot) {
+          inv.addItem(battle.player.charId, drop.itemId, drop.count, drop.quality);
+        }
+      } catch (e) { /* ignore */ }
+
       // Tutorial progress
       try {
         const tutorial = require('./tutorial');
@@ -599,6 +620,18 @@ function endBattle(battleId, won) {
         for (const m of battle.monsters) {
           quest.updateProgress(battle.player.charId, 'kill_monster', m.name.toLowerCase().replace(/\s/g, '_'));
         }
+      } catch (e) { /* ignore */ }
+
+      // Achievement progress
+      try {
+        const achievement = require('./achievement');
+        achievement.incrementStat(battle.player.charId, 'gold_total', goldReward);
+      } catch (e) { /* ignore */ }
+
+      // Ranking update
+      try {
+        const ranking = require('./ranking');
+        ranking.updatePlayerRanking(battle.player.charId);
       } catch (e) { /* ignore */ }
     }
   } else {
