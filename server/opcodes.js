@@ -365,6 +365,9 @@ const C = {
 
   // City Build
   CITY_SPEED_UP:       0x6103,
+
+  // Gift Code
+  REDEEM_CODE:         0x9A00,
 };
 
 // ═══════════════════════════════════════════
@@ -685,6 +688,9 @@ const S = {
   TUTORIAL_COMPLETE_RSP: 0x8912,
   NPC_DIALOG_RSP:        0x8913,
   TUTORIAL_SKIP_RSP:     0x8914,
+
+  // Gift Code
+  REDEEM_CODE_RSP:       0x9A10,
 };
 
 // Reverse lookup: number → name

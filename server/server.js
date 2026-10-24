@@ -73,6 +73,7 @@ const purgatoryMaze = require('./systems/purgatory-maze');
 const archaeology = require('./systems/archaeology');
 const crossServer = require('./systems/cross-server');
 const tutorial = require('./systems/tutorial');
+const titles = require('./systems/titles');
 const giftCode = require('./systems/gift-code');
 const title = require('./systems/title');
 
