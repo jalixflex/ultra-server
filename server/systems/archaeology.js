@@ -3,87 +3,60 @@
 const db = require('../db');
 
 const OPCODES = {
-  C_ARCHAEOLOGY_INFO:       0x8700,
-  S_ARCHAEOLOGY_INFO:       0x8710,
-  C_ARCHAEOLOGY_DIG:        0x8701,
-  S_ARCHAEOLOGY_DIG:        0x8711,
-  C_ARCHAEOLOGY_COLLECTION: 0x8702,
-  S_ARCHAEOLOGY_COLLECTION: 0x8712,
-  C_ARCHAEOLOGY_CLAIM_SET:  0x8703,
-  S_ARCHAEOLOGY_CLAIM_SET:  0x8713,
+  C_ARCH_INFO:    0x8700,
+  S_ARCH_INFO:    0x8710,
+  C_ARCH_DIG:     0x8701,
+  S_ARCH_DIG:     0x8711,
+  C_ARCH_COLLECT: 0x8702,
+  S_ARCH_COLLECT: 0x8712,
 };
 
-const DIG_SITES = {
-  ancient_ruins:  { id: 1, name: 'Ancient Ruins',    minLevel: 30, energyCost: 1, dropPool: [1,2,3,4,5,6,  25,26,27] },
-  sunken_temple:  { id: 2, name: 'Sunken Temple',    minLevel: 45, energyCost: 2, dropPool: [7,8,9,10,11,12, 28,29,30] },
-  dragon_graveyard:{ id: 3, name: 'Dragon Graveyard', minLevel: 55, energyCost: 2, dropPool: [13,14,15,16,17,18] },
-  crystal_cavern: { id: 4, name: 'Crystal Cavern',   minLevel: 65, energyCost: 3, dropPool: [19,20,21,22,23,24] },
-  celestial_peak: { id: 5, name: 'Celestial Peak',   minLevel: 75, energyCost: 3, dropPool: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30] },
-};
+const GRID_W = 6;
+const GRID_H = 6;
+const MAX_DIGS = 20;
 
-const ARTIFACTS = {
-  1:  { name: 'Bronze Idol',        set: 1, rarity: 'common' },
-  2:  { name: 'Clay Tablet',        set: 1, rarity: 'common' },
-  3:  { name: 'Ancient Coin',       set: 1, rarity: 'common' },
-  4:  { name: 'Jade Amulet',        set: 1, rarity: 'uncommon' },
-  5:  { name: 'Golden Scarab',      set: 1, rarity: 'uncommon' },
-  6:  { name: 'Pharaoh Mask',       set: 1, rarity: 'rare' },
-  7:  { name: 'Pearl Necklace',     set: 2, rarity: 'common' },
-  8:  { name: 'Coral Fragment',     set: 2, rarity: 'common' },
-  9:  { name: 'Sea Shell Horn',     set: 2, rarity: 'common' },
-  10: { name: 'Trident Shard',      set: 2, rarity: 'uncommon' },
-  11: { name: 'Mermaid Scale',      set: 2, rarity: 'uncommon' },
-  12: { name: 'Poseidon Ring',      set: 2, rarity: 'rare' },
-  13: { name: 'Dragon Tooth',       set: 3, rarity: 'common' },
-  14: { name: 'Wyrm Scale',         set: 3, rarity: 'common' },
-  15: { name: 'Bone Fragment',      set: 3, rarity: 'common' },
-  16: { name: 'Drake Claw',         set: 3, rarity: 'uncommon' },
-  17: { name: 'Dragon Eye Gem',     set: 3, rarity: 'uncommon' },
-  18: { name: 'Elder Dragon Heart', set: 3, rarity: 'rare' },
-  19: { name: 'Quartz Shard',       set: 4, rarity: 'common' },
-  20: { name: 'Amethyst Chunk',     set: 4, rarity: 'common' },
-  21: { name: 'Crystal Orb',        set: 4, rarity: 'common' },
-  22: { name: 'Diamond Dust',       set: 4, rarity: 'uncommon' },
-  23: { name: 'Prismatic Lens',     set: 4, rarity: 'uncommon' },
-  24: { name: 'Crystal Crown',      set: 4, rarity: 'rare' },
-  25: { name: 'Star Map',           set: 5, rarity: 'common' },
-  26: { name: 'Moon Stone',         set: 5, rarity: 'common' },
-  27: { name: 'Sun Dial',           set: 5, rarity: 'common' },
-  28: { name: 'Celestial Compass',  set: 5, rarity: 'uncommon' },
-  29: { name: 'Astrolabe',          set: 5, rarity: 'uncommon' },
-  30: { name: 'Heavenly Scepter',   set: 5, rarity: 'rare' },
-};
+const TREASURES = [
+  { id: 'gold_s',    name: 'Gold Pouch',       type: 'gold',    amount: 2000,  rarity: 'common',   depth: 1 },
+  { id: 'gold_m',    name: 'Gold Chest',       type: 'gold',    amount: 8000,  rarity: 'uncommon', depth: 2 },
+  { id: 'gold_l',    name: 'Gold Vault',       type: 'gold',    amount: 25000, rarity: 'rare',     depth: 3 },
+  { id: 'exp_s',     name: 'EXP Scroll',       type: 'exp',     amount: 3000,  rarity: 'common',   depth: 1 },
+  { id: 'exp_m',     name: 'EXP Tome',         type: 'exp',     amount: 10000, rarity: 'uncommon', depth: 2 },
+  { id: 'bbalens_s', name: 'Bound Balen Sack', type: 'bound_balens', amount: 5,  rarity: 'rare',  depth: 2 },
+  { id: 'bbalens_m', name: 'Balen Chest',      type: 'bound_balens', amount: 20, rarity: 'epic',  depth: 3 },
+  { id: 'frag_a',    name: 'Ancient Coin',     type: 'fragment', setId: 'coins',   rarity: 'uncommon', depth: 1 },
+  { id: 'frag_b',    name: 'Ancient Vase',     type: 'fragment', setId: 'relics',  rarity: 'rare',    depth: 2 },
+  { id: 'frag_c',    name: 'Ancient Crown',    type: 'fragment', setId: 'relics',  rarity: 'epic',    depth: 3 },
+  { id: 'frag_d',    name: 'Ancient Scroll',   type: 'fragment', setId: 'scrolls', rarity: 'rare',    depth: 2 },
+  { id: 'frag_e',    name: 'Ancient Ring',     type: 'fragment', setId: 'jewelry', rarity: 'epic',    depth: 3 },
+];
 
-const SETS = {
-  1: { name: 'Desert Relics',      items: [1,2,3,4,5,6],     reward: { gold: 500000, exp: 100000 } },
-  2: { name: 'Ocean Treasures',    items: [7,8,9,10,11,12],   reward: { gold: 750000, exp: 150000 } },
-  3: { name: 'Dragon Remains',     items: [13,14,15,16,17,18], reward: { gold: 1000000, exp: 200000 } },
-  4: { name: 'Crystal Collection', items: [19,20,21,22,23,24], reward: { gold: 1250000, exp: 250000 } },
-  5: { name: 'Celestial Artifacts',items: [25,26,27,28,29,30], reward: { gold: 1500000, exp: 300000 } },
+const COLLECTIONS = {
+  coins:   { name: 'Ancient Coins',   needed: 5, reward: { gold: 100000 } },
+  relics:  { name: 'Ancient Relics',  needed: 3, reward: { gold: 50000, boundBalens: 50 } },
+  scrolls: { name: 'Ancient Scrolls', needed: 4, reward: { exp: 80000 } },
+  jewelry: { name: 'Ancient Jewelry', needed: 3, reward: { gold: 80000, boundBalens: 80 } },
 };
-
-const DROP_WEIGHTS = { common: 60, uncommon: 30, rare: 10 };
-const MAX_DAILY_ENERGY = 10;
 
 function initDB() {
   db.getDatabase().exec(`
     CREATE TABLE IF NOT EXISTS archaeology (
-      char_id     INTEGER PRIMARY KEY REFERENCES characters(id),
-      dig_energy  INTEGER DEFAULT ${MAX_DAILY_ENERGY},
-      total_digs  INTEGER DEFAULT 0,
-      rare_finds  INTEGER DEFAULT 0,
-      last_reset  TEXT DEFAULT (date('now'))
+      char_id   INTEGER PRIMARY KEY REFERENCES characters(id),
+      grid      TEXT DEFAULT '',
+      digs_left INTEGER DEFAULT ${MAX_DIGS},
+      last_date TEXT DEFAULT '',
+      found     TEXT DEFAULT '[]'
     );
-    CREATE TABLE IF NOT EXISTS archaeology_collection (
-      char_id   INTEGER NOT NULL REFERENCES characters(id),
-      item_id   INTEGER NOT NULL,
-      quantity  INTEGER DEFAULT 0,
-      PRIMARY KEY (char_id, item_id)
+    CREATE TABLE IF NOT EXISTS arch_fragments (
+      char_id INTEGER NOT NULL,
+      frag_id TEXT NOT NULL,
+      count   INTEGER DEFAULT 0,
+      PRIMARY KEY(char_id, frag_id)
     );
-    CREATE TABLE IF NOT EXISTS archaeology_sets_claimed (
-      char_id  INTEGER NOT NULL REFERENCES characters(id),
-      set_id   INTEGER NOT NULL,
-      PRIMARY KEY (char_id, set_id)
+    CREATE TABLE IF NOT EXISTS arch_collections (
+      char_id   INTEGER NOT NULL,
+      set_id    TEXT NOT NULL,
+      completed INTEGER DEFAULT 0,
+      PRIMARY KEY(char_id, set_id)
     );
   `);
 }
@@ -92,140 +65,92 @@ function ensureEntry(charId) {
   db.getDatabase().prepare('INSERT OR IGNORE INTO archaeology (char_id) VALUES (?)').run(charId);
 }
 
-function resetDaily(charId) {
+function generateGrid() {
+  const grid = Array.from({ length: GRID_H }, () => Array(GRID_W).fill(null));
+  const num = 8 + Math.floor(Math.random() * 5);
+  for (let i = 0; i < num; i++) {
+    let x, y;
+    do { x = Math.floor(Math.random() * GRID_W); y = Math.floor(Math.random() * GRID_H); } while (grid[y][x] !== null);
+    const depth = y < 2 ? 1 : y < 4 ? 2 : 3;
+    const pool = TREASURES.filter(t => t.depth <= depth);
+    grid[y][x] = pool[Math.floor(Math.random() * pool.length)].id;
+  }
+  return grid;
+}
+
+function getArchInfo(charId) {
   ensureEntry(charId);
-  const row = db.getDatabase().prepare('SELECT last_reset FROM archaeology WHERE char_id = ?').get(charId);
+  const row = db.getDatabase().prepare('SELECT * FROM archaeology WHERE char_id = ?').get(charId);
   const today = new Date().toISOString().slice(0, 10);
-  if (row && row.last_reset !== today) {
-    db.getDatabase().prepare('UPDATE archaeology SET dig_energy = ?, last_reset = ? WHERE char_id = ?')
-      .run(MAX_DAILY_ENERGY, today, charId);
+  if (row.last_date !== today || !row.grid) {
+    const grid = generateGrid();
+    db.getDatabase().prepare('UPDATE archaeology SET grid = ?, digs_left = ?, last_date = ?, found = ? WHERE char_id = ?')
+      .run(JSON.stringify(grid), MAX_DIGS, today, '[]', charId);
+    return { success: true, digsLeft: MAX_DIGS, gridSize: { w: GRID_W, h: GRID_H }, found: [], collections: getCollections(charId) };
   }
+  return { success: true, digsLeft: row.digs_left, gridSize: { w: GRID_W, h: GRID_H }, found: JSON.parse(row.found || '[]'), collections: getCollections(charId) };
 }
 
-function getArchaeologyInfo(charId) {
-  resetDaily(charId);
-  const info = db.getDatabase().prepare('SELECT * FROM archaeology WHERE char_id = ?').get(charId);
-  const sites = Object.entries(DIG_SITES).map(([key, s]) => ({
-    id: s.id, key, name: s.name, minLevel: s.minLevel, energyCost: s.energyCost,
-  }));
-  return {
-    success: true,
-    energy: info.dig_energy,
-    maxEnergy: MAX_DAILY_ENERGY,
-    totalDigs: info.total_digs,
-    rareFinds: info.rare_finds,
-    sites,
-  };
-}
-
-function dig(charId, siteKey) {
-  const site = DIG_SITES[siteKey];
-  if (!site) return { success: false, msg: 'Invalid dig site' };
-
-  const char = db.getCharacterById(charId);
-  if (!char) return { success: false, msg: 'Character not found' };
-  if (char.grade < site.minLevel) return { success: false, msg: `Level ${site.minLevel} required` };
-
-  resetDaily(charId);
-  const info = db.getDatabase().prepare('SELECT * FROM archaeology WHERE char_id = ?').get(charId);
-  if (info.dig_energy < site.energyCost) return { success: false, msg: 'Not enough dig energy' };
-
-  db.getDatabase().prepare('UPDATE archaeology SET dig_energy = dig_energy - ?, total_digs = total_digs + 1 WHERE char_id = ?')
-    .run(site.energyCost, charId);
-
-  const pool = site.dropPool;
-  const weightedPool = [];
-  for (const itemId of pool) {
-    const art = ARTIFACTS[itemId];
-    if (art) {
-      const w = DROP_WEIGHTS[art.rarity] || 10;
-      for (let i = 0; i < w; i++) weightedPool.push(itemId);
-    }
-  }
-
-  const found = weightedPool[Math.floor(Math.random() * weightedPool.length)];
-  const foundArt = ARTIFACTS[found];
-
-  db.getDatabase().prepare(`
-    INSERT INTO archaeology_collection (char_id, item_id, quantity) VALUES (?, ?, 1)
-    ON CONFLICT(char_id, item_id) DO UPDATE SET quantity = quantity + 1
-  `).run(charId, found);
-
-  if (foundArt.rarity === 'rare') {
-    db.getDatabase().prepare('UPDATE archaeology SET rare_finds = rare_finds + 1 WHERE char_id = ?').run(charId);
-  }
-
-  return {
-    success: true,
-    found: { itemId: found, name: foundArt.name, set: foundArt.set, rarity: foundArt.rarity },
-    energyLeft: info.dig_energy - site.energyCost,
-  };
-}
-
-function getCollection(charId) {
+function dig(charId, x, y) {
   ensureEntry(charId);
-  const items = db.getDatabase().prepare('SELECT * FROM archaeology_collection WHERE char_id = ?').all(charId);
-  const collection = {};
-  for (const row of items) {
-    const art = ARTIFACTS[row.item_id];
-    if (art) {
-      collection[row.item_id] = { ...art, itemId: row.item_id, quantity: row.quantity };
+  const row = db.getDatabase().prepare('SELECT * FROM archaeology WHERE char_id = ?').get(charId);
+  const today = new Date().toISOString().slice(0, 10);
+  if (row.last_date !== today) return { success: false, msg: 'Open archaeology first' };
+  if (row.digs_left <= 0) return { success: false, msg: 'No digs left' };
+  if (x < 0 || x >= GRID_W || y < 0 || y >= GRID_H) return { success: false, msg: 'Invalid position' };
+  const found = JSON.parse(row.found || '[]');
+  if (found.find(f => f.x === x && f.y === y)) return { success: false, msg: 'Already dug here' };
+
+  const grid = JSON.parse(row.grid);
+  const tid = grid[y][x];
+  let result = { found: false };
+
+  if (tid) {
+    const t = TREASURES.find(tr => tr.id === tid);
+    if (t) {
+      if (t.type === 'gold') db.getDatabase().prepare('UPDATE characters SET gold = gold + ? WHERE id = ?').run(t.amount, charId);
+      else if (t.type === 'exp') db.getDatabase().prepare('UPDATE characters SET exp = exp + ? WHERE id = ?').run(t.amount, charId);
+      else if (t.type === 'bound_balens') db.getDatabase().prepare('UPDATE characters SET bound_balens = bound_balens + ? WHERE id = ?').run(t.amount, charId);
+      else if (t.type === 'fragment') {
+        db.getDatabase().prepare('INSERT OR IGNORE INTO arch_fragments (char_id, frag_id) VALUES (?, ?)').run(charId, t.id);
+        db.getDatabase().prepare('UPDATE arch_fragments SET count = count + 1 WHERE char_id = ? AND frag_id = ?').run(charId, t.id);
+      }
+      result = { found: true, treasure: { id: t.id, name: t.name, type: t.type, amount: t.amount, rarity: t.rarity } };
     }
   }
-  return { success: true, collection };
+
+  found.push({ x, y, treasureId: tid || null });
+  db.getDatabase().prepare('UPDATE archaeology SET digs_left = digs_left - 1, found = ? WHERE char_id = ?').run(JSON.stringify(found), charId);
+  return { success: true, ...result, digsLeft: row.digs_left - 1 };
 }
 
-function getCompletedSets(charId) {
-  const { collection } = getCollection(charId);
-  const completed = [];
-  const claimed = db.getDatabase().prepare('SELECT set_id FROM archaeology_sets_claimed WHERE char_id = ?').all(charId)
-    .map(r => r.set_id);
-
-  for (const [setId, setDef] of Object.entries(SETS)) {
-    const sid = parseInt(setId);
-    const hasAll = setDef.items.every(itemId => collection[itemId] && collection[itemId].quantity > 0);
-    completed.push({
-      setId: sid, name: setDef.name, complete: hasAll,
-      claimed: claimed.includes(sid), reward: setDef.reward,
-      items: setDef.items.map(id => ({
-        itemId: id, name: ARTIFACTS[id].name, rarity: ARTIFACTS[id].rarity,
-        owned: !!(collection[id] && collection[id].quantity > 0),
-      })),
-    });
+function getCollections(charId) {
+  const result = {};
+  for (const [setId, col] of Object.entries(COLLECTIONS)) {
+    const frags = TREASURES.filter(t => t.setId === setId);
+    let total = 0;
+    for (const f of frags) {
+      const r = db.getDatabase().prepare('SELECT count FROM arch_fragments WHERE char_id = ? AND frag_id = ?').get(charId, f.id);
+      total += r ? r.count : 0;
+    }
+    const comp = db.getDatabase().prepare('SELECT completed FROM arch_collections WHERE char_id = ? AND set_id = ?').get(charId, setId);
+    result[setId] = { name: col.name, progress: total, needed: col.needed, completed: !!comp?.completed, reward: col.reward };
   }
-  return { success: true, sets: completed };
+  return result;
 }
 
-function claimSetReward(charId, setId) {
-  const sid = parseInt(setId);
-  const setDef = SETS[sid];
-  if (!setDef) return { success: false, msg: 'Invalid set' };
-
-  const already = db.getDatabase().prepare('SELECT 1 FROM archaeology_sets_claimed WHERE char_id = ? AND set_id = ?').get(charId, sid);
-  if (already) return { success: false, msg: 'Already claimed' };
-
-  const items = db.getDatabase().prepare('SELECT * FROM archaeology_collection WHERE char_id = ?').all(charId);
-  const owned = {};
-  for (const r of items) owned[r.item_id] = r.quantity;
-
-  const hasAll = setDef.items.every(id => (owned[id] || 0) > 0);
-  if (!hasAll) return { success: false, msg: 'Set not complete' };
-
-  db.getDatabase().prepare('INSERT INTO archaeology_sets_claimed (char_id, set_id) VALUES (?, ?)').run(charId, sid);
-
-  const char = db.getCharacterById(charId);
-  if (char) {
-    db.updateCharacter(charId, {
-      gold: (char.gold || 0) + setDef.reward.gold,
-      exp: (char.exp || 0) + setDef.reward.exp,
-    });
-  }
-
-  return { success: true, setId: sid, reward: setDef.reward };
+function collectSet(charId, setId) {
+  const col = COLLECTIONS[setId];
+  if (!col) return { success: false, msg: 'Invalid set' };
+  const status = getCollections(charId);
+  const s = status[setId];
+  if (s.completed) return { success: false, msg: 'Already collected' };
+  if (s.progress < s.needed) return { success: false, msg: 'Not enough pieces' };
+  if (col.reward.gold) db.getDatabase().prepare('UPDATE characters SET gold = gold + ? WHERE id = ?').run(col.reward.gold, charId);
+  if (col.reward.exp) db.getDatabase().prepare('UPDATE characters SET exp = exp + ? WHERE id = ?').run(col.reward.exp, charId);
+  if (col.reward.boundBalens) db.getDatabase().prepare('UPDATE characters SET bound_balens = bound_balens + ? WHERE id = ?').run(col.reward.boundBalens, charId);
+  db.getDatabase().prepare('INSERT OR REPLACE INTO arch_collections (char_id, set_id, completed) VALUES (?, ?, 1)').run(charId, setId);
+  return { success: true, setId, name: col.name, reward: col.reward };
 }
 
-module.exports = {
-  OPCODES, ARTIFACTS, SETS, DIG_SITES, MAX_DAILY_ENERGY,
-  initDB,
-  getArchaeologyInfo, dig, getCollection, getCompletedSets, claimSetReward, resetDaily,
-};
+module.exports = { OPCODES, GRID_W, GRID_H, MAX_DIGS, TREASURES, COLLECTIONS, initDB, getArchInfo, dig, collectSet };
