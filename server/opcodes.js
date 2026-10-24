@@ -116,6 +116,41 @@ const C = {
   FORGE_SOCKET:        0x55F1,
   FORGE_REFINE:        0x55F2,
   FORGE_SYNTHESIZE:    0x55F3,
+
+  // Quest
+  QUEST_LIST:          0x6200,
+  QUEST_ACCEPT:        0x6201,
+  QUEST_COMPLETE:      0x6202,
+  QUEST_NPC_TALK:      0x6203,
+
+  // City
+  CITY_INFO:           0x6100,
+  CITY_UPGRADE:        0x6101,
+  CITY_COLLECT:        0x6102,
+
+  // Bounty
+  BOUNTY_LIST:         0x6300,
+  BOUNTY_ACCEPT:       0x6301,
+  BOUNTY_COMPLETE:     0x6302,
+  BOUNTY_REFRESH:      0x6303,
+
+  // Devotion
+  DEVOTION_INFO:       0x6400,
+  DEVOTION_CLAIM:      0x6401,
+
+  // Daily Login
+  LOGIN_REWARD_INFO:   0x6500,
+  LOGIN_REWARD_CLAIM:  0x6501,
+
+  // World Boss
+  WORLD_BOSS_INFO:     0x6600,
+  WORLD_BOSS_ATTACK:   0x6601,
+  WORLD_BOSS_RANK:     0x6602,
+
+  // Catacombs
+  CATACOMBS_INFO:      0x6700,
+  CATACOMBS_FIGHT:     0x6701,
+  CATACOMBS_RESET:     0x6702,
 };
 
 // ═══════════════════════════════════════════
@@ -203,6 +238,37 @@ const S = {
 
   // Forge
   FORGE_RESULT:          0x5600,
+
+  // Quest
+  QUEST_LIST_RSP:        0x6210,
+  QUEST_UPDATE:          0x6211,
+  QUEST_NPC_TALK_RSP:    0x6213,
+
+  // City
+  CITY_INFO_RSP:         0x6110,
+  CITY_UPGRADE_RSP:      0x6111,
+  CITY_COLLECT_RSP:      0x6112,
+
+  // Bounty
+  BOUNTY_LIST_RSP:       0x6310,
+  BOUNTY_UPDATE:         0x6311,
+
+  // Devotion
+  DEVOTION_INFO_RSP:     0x6410,
+  DEVOTION_CLAIM_RSP:    0x6411,
+
+  // Daily Login
+  LOGIN_REWARD_INFO_RSP: 0x6510,
+  LOGIN_REWARD_CLAIM_RSP:0x6511,
+
+  // World Boss
+  WORLD_BOSS_INFO_RSP:   0x6610,
+  WORLD_BOSS_ATTACK_RSP: 0x6611,
+  WORLD_BOSS_RANK_RSP:   0x6612,
+
+  // Catacombs
+  CATACOMBS_INFO_RSP:    0x6710,
+  CATACOMBS_FIGHT_RSP:   0x6711,
 };
 
 // Reverse lookup: number → name

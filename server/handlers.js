@@ -31,6 +31,13 @@ const academy = require('./systems/academy');
 const skills = require('./systems/skills');
 const wings = require('./systems/wings');
 const forge = require('./systems/forge');
+const quest = require('./systems/quest');
+const city = require('./systems/city');
+const bounty = require('./systems/bounty');
+const devotion = require('./systems/devotion');
+const dailyLogin = require('./systems/daily-login');
+const worldBoss = require('./systems/world-boss');
+const catacombs = require('./systems/catacombs');
 
 /**
  * Per-connection state stored on the ws object:
@@ -324,6 +331,12 @@ HANDLERS[C.G_LOGIN_GATEWAY] = (ws, body, pkt, cfg) => {
       magicDefence: char.magic_defence,
     });
     sendPacket(ws, S.U_C_PLAYER_INFO, playerBody, char.id);
+
+    // Trigger daily login reward tracking
+    try { dailyLogin.onLogin(charId); } catch (e) { console.error('[LOGIN] dailyLogin error:', e.message); }
+
+    // Auto-accept first quest for new characters
+    try { quest.autoAcceptFirstQuest(charId); } catch (e) { console.error('[LOGIN] quest error:', e.message); }
   }
 };
 
@@ -923,6 +936,177 @@ HANDLERS[C.FORGE_SYNTHESIZE] = (ws, body) => {
     const result = forge.synthesizeGems(cid, req.gemType, req.gemLevel);
     sendJson(ws, S.FORGE_RESULT, result);
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Quest ──────────────────────────────────
+HANDLERS[C.QUEST_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const active = quest.getActiveQuests(cid);
+  const available = quest.getAvailableQuests(cid);
+  const completed = quest.getCompletedQuests(cid);
+  sendJson(ws, S.QUEST_LIST_RSP, { active, available, completedIds: completed });
+};
+
+HANDLERS[C.QUEST_ACCEPT] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = quest.acceptQuest(cid, req.questId);
+    sendJson(ws, S.QUEST_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.QUEST_COMPLETE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = quest.completeQuest(cid, req.questId);
+    sendJson(ws, S.QUEST_UPDATE, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.QUEST_NPC_TALK] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = quest.talkToNpc(cid, req.npcId);
+    sendJson(ws, S.QUEST_NPC_TALK_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── City ───────────────────────────────────
+HANDLERS[C.CITY_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const buildings = city.getCityInfo(cid);
+  sendJson(ws, S.CITY_INFO_RSP, { buildings });
+};
+
+HANDLERS[C.CITY_UPGRADE] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = city.upgradeBuilding(cid, req.buildingId);
+    sendJson(ws, S.CITY_UPGRADE_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.CITY_COLLECT] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = city.collectGold(cid);
+  sendJson(ws, S.CITY_COLLECT_RSP, result);
+};
+
+// ─── Bounty ─────────────────────────────────
+HANDLERS[C.BOUNTY_LIST] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const info = bounty.getBountyInfo(cid);
+  sendJson(ws, S.BOUNTY_LIST_RSP, info);
+};
+
+HANDLERS[C.BOUNTY_ACCEPT] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = bounty.generateBounty(cid);
+  sendJson(ws, S.BOUNTY_UPDATE, result);
+};
+
+HANDLERS[C.BOUNTY_COMPLETE] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = bounty.completeBounty(cid);
+  sendJson(ws, S.BOUNTY_UPDATE, result);
+};
+
+HANDLERS[C.BOUNTY_REFRESH] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = bounty.refreshBounty(cid);
+  sendJson(ws, S.BOUNTY_UPDATE, result);
+};
+
+// ─── Devotion ───────────────────────────────
+HANDLERS[C.DEVOTION_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const info = devotion.getDevotionInfo(cid);
+  sendJson(ws, S.DEVOTION_INFO_RSP, info);
+};
+
+HANDLERS[C.DEVOTION_CLAIM] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = devotion.claimTierReward(cid, req.tierIndex);
+    sendJson(ws, S.DEVOTION_CLAIM_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+// ─── Daily Login ────────────────────────────
+HANDLERS[C.LOGIN_REWARD_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const info = dailyLogin.getLoginInfo(cid);
+  sendJson(ws, S.LOGIN_REWARD_INFO_RSP, info);
+};
+
+HANDLERS[C.LOGIN_REWARD_CLAIM] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = dailyLogin.claimReward(cid);
+  sendJson(ws, S.LOGIN_REWARD_CLAIM_RSP, result);
+};
+
+// ─── World Boss ─────────────────────────────
+HANDLERS[C.WORLD_BOSS_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const info = worldBoss.getBossInfo(cid);
+  sendJson(ws, S.WORLD_BOSS_INFO_RSP, info);
+};
+
+HANDLERS[C.WORLD_BOSS_ATTACK] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = worldBoss.attackBoss(cid);
+  sendJson(ws, S.WORLD_BOSS_ATTACK_RSP, result);
+};
+
+HANDLERS[C.WORLD_BOSS_RANK] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = worldBoss.getRanking(cid);
+  sendJson(ws, S.WORLD_BOSS_RANK_RSP, result);
+};
+
+// ─── Catacombs ──────────────────────────────
+HANDLERS[C.CATACOMBS_INFO] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const info = catacombs.getInfo(cid);
+  sendJson(ws, S.CATACOMBS_INFO_RSP, info);
+};
+
+HANDLERS[C.CATACOMBS_FIGHT] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = catacombs.fightFloor(cid);
+  sendJson(ws, S.CATACOMBS_FIGHT_RSP, result);
+};
+
+HANDLERS[C.CATACOMBS_RESET] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  const result = catacombs.resetFloor(cid);
+  sendSimpleResult(ws, result.success, result.msg);
 };
 
 module.exports = { handlePacket, sendPacket };

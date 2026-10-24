@@ -34,6 +34,14 @@ const academy = require('./systems/academy');
 const skills = require('./systems/skills');
 const wings = require('./systems/wings');
 const forge = require('./systems/forge');
+const quest = require('./systems/quest');
+const city = require('./systems/city');
+const bounty = require('./systems/bounty');
+const devotion = require('./systems/devotion');
+const dailyLogin = require('./systems/daily-login');
+const worldBoss = require('./systems/world-boss');
+const catacombs = require('./systems/catacombs');
+const featureUnlock = require('./systems/feature-unlock');
 
 // ─── Configuration ───────────────────────
 const PORT = parseInt(process.env.PORT, 10) || 8899;
@@ -66,6 +74,13 @@ farm.initDB();
 academy.initDB();
 skills.initDB();
 wings.initDB();
+quest.initDB();
+city.initDB();
+bounty.initDB();
+devotion.initDB();
+dailyLogin.initDB();
+worldBoss.initDB();
+catacombs.initDB();
 console.log('[DB] Database ready (all systems).');
 
 // ─── Create HTTP Server ──────────────────
@@ -129,16 +144,19 @@ wss.on('connection', (ws, req) => {
 server.listen(PORT, HOST, () => {
   console.log('');
   console.log('╔══════════════════════════════════════════════╗');
-  console.log('║       Wartune Ultra Server v1.2.0            ║');
+  console.log('║       Wartune Ultra Server v2.0.0            ║');
   console.log('╠══════════════════════════════════════════════╣');
   console.log(`║  HTTP + WS : ${HOST}:${PORT}                    ║`);
   console.log(`║  Public    : ${PUBLIC_HOST}:${PORT}              ║`);
   console.log('║  Database  : SQLite (data/wartune.db)        ║');
-  console.log('║  Systems   : Login, Chat, Battle, Inventory  ║');
-  console.log('║             Guild, Campaign, Mail, Friends   ║');
-  console.log('║             Shop, VIP, Astral, Sylph, Mount  ║');
-  console.log('║             Troops, Arena, Farm, Academy     ║');
-  console.log('║             Skills, Wings, Forge             ║');
+  console.log('║  25 Systems Loaded:                          ║');
+  console.log('║  Core: Login, Chat, Battle, Inventory        ║');
+  console.log('║  Social: Guild, Mail, Friends, Arena         ║');
+  console.log('║  Quest: Story, Bounty, Devotion, Daily Login ║');
+  console.log('║  World: Campaign(6ch), World Boss, Catacombs ║');
+  console.log('║  Progress: Skills, Wings, Academy, Forge     ║');
+  console.log('║  Companion: Astral, Sylph, Mount, Troops     ║');
+  console.log('║  Economy: Shop, VIP, Farm, City Buildings    ║');
   console.log('╚══════════════════════════════════════════════╝');
   console.log('');
 });
