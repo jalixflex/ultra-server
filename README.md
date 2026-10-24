@@ -218,22 +218,135 @@ Bu sunucu 14GB HTML5 Wartune Ultra client'ı ile çalışacak şekilde tasarlanm
 - `SimpleResultMsg` — Genel sonuç
 - `SynchronizedTimeMsg` — Zaman senkronizasyonu
 
-### Tamamlanması Gereken Alanlar
-- [ ] Item template sistemi (item ID → isim, ikon, stat eşleştirmesi)
-- [ ] Protobuf tanımları tüm sistemler için (şu an çoğu JSON)
-- [ ] Quest içeriği genişletme (27 → 200+ görev)
-- [ ] Campaign stage verileri (6 bölüm → 10+)
-- [ ] Monster templates (18 → 500+)
-- [ ] Shop kataloğu genişletme (13 → 100+ item)
-- [ ] Map zone verileri (7 → 15+)
-- [ ] Seviye bazlı stat büyümesi
-- [ ] Equipment set bonusları
-- [ ] Karakter oluşturma → starter items verme
-- [ ] Şifre hashleme
-- [ ] VIP bonuslarının tüm sistemlere entegrasyonu
-- [ ] Achievement tetikleyicileri
-- [ ] Ranking otomatik güncelleme
-- [ ] Quest progress → tüm sistem aksiyonlarından tetikleme
+### Client'tan Çıkarılması Gereken Veriler
+
+**ÖNEMLİ**: Aşağıdaki verilerin hepsi 14GB HTML5 client'ın içinde zaten mevcuttur. Client tüm görev metinlerini, item isimlerini, canavar statlarını, NPC diyaloglarını, harita verilerini ve protobuf şemalarını barındırır. Sunucunun bu verileri yeniden yaratmasına gerek yok — client dosyalarından çıkarılıp sunucuya aktarılmalıdır.
+
+#### Client Dosya Yapısı (İncelenmesi Gereken Yerler)
+
+```
+webroot_web/                    ← Client kök dizini
+├── res/
+│   ├── config/                 ← Oyun konfigürasyon dosyaları
+│   │   ├── item/               ← Item template JSON/XML dosyaları
+│   │   │   ├── ItemTemplate.json    ← Tüm item ID → isim, ikon, stat, tip, seviye
+│   │   │   ├── EquipTemplate.json   ← Ekipman detayları (slot, class req, set bonus)
+│   │   │   └── GemTemplate.json     ← Mücevher verileri
+│   │   ├── quest/              ← Görev tanımları
+│   │   │   ├── QuestTemplate.json   ← Quest ID → hedefler, ödüller, ön koşullar
+│   │   │   └── QuestDialog.json     ← NPC diyalog metinleri
+│   │   ├── monster/            ← Canavar verileri
+│   │   │   └── MonsterTemplate.json ← Monster ID → isim, stat, seviye, drop tablosu
+│   │   ├── skill/              ← Beceri tanımları
+│   │   │   └── SkillTemplate.json   ← Skill ID → hasar, mana, cooldown, efekt
+│   │   ├── campaign/           ← Sefer haritaları
+│   │   │   └── CampaignTemplate.json ← Stage → canavar listesi, ödüller
+│   │   ├── map/                ← Harita bölgeleri
+│   │   ├── npc/                ← NPC verileri ve diyaloglar
+│   │   ├── shop/               ← Mağaza kataloğu
+│   │   └── ...                 ← Diğer konfigürasyonlar
+│   ├── proto/                  ← Protobuf tanım dosyaları
+│   │   ├── *.proto             ← .proto dosyaları (tüm mesaj şemaları)
+│   │   └── proto.bin           ← Derlenmiş protobuf descriptor
+│   ├── lang/                   ← Dil dosyaları (TR/EN)
+│   │   └── tr/                 ← Türkçe çeviriler
+│   │       ├── item_name.json  ← Item isimleri
+│   │       ├── quest_text.json ← Görev metinleri
+│   │       ├── npc_dialog.json ← NPC diyalogları
+│   │       ├── skill_name.json ← Beceri isimleri
+│   │       └── ui_text.json    ← UI metinleri
+│   └── atlas/                  ← Sprite/ikon atlas dosyaları
+└── src/                        ← Laya Engine JavaScript kaynakları
+    ├── proto/                  ← Protobuf JS kodları (mesaj sınıfları)
+    ├── config/                 ← Config reader kodları
+    └── net/                    ← Network/opcode tanımları
+```
+
+#### Çıkarma Adımları (Claude İçin Talimatlar)
+
+**1. Protobuf Şemaları** (EN KRİTİK)
+```bash
+# Client'ın proto/ dizininde .proto dosyalarını bul
+find webroot_web/ -name "*.proto" -o -name "proto.bin" -o -name "protobuf*"
+# Veya JS kaynaklarında protobuf mesaj tanımlarını bul
+grep -r "protobuf.Type\|proto.define\|addField\|ProtoBuf.newBuilder" webroot_web/src/
+```
+Bu .proto tanımlarını `server/proto.js` ve `server/proto-game.js` dosyalarına ekle. Şu an 11 encode çağrısı protobuf kullanıyor, 216 çağrı JSON. Client gerçek protobuf bekliyor — JSON paketleri sessizce görmezden geliniyor.
+
+**2. Item Template Verileri**
+```bash
+# Config dizininde item tanımlarını bul
+find webroot_web/ -name "*item*" -o -name "*equip*" -o -name "*Item*"
+# JSON/XML item veritabanını oku ve server/data/items.json oluştur
+```
+Her item ID için: isim, ikon atlas ID, tip (weapon/armor/ring/accessory/consumable/material/gem), slot, base statlar (attack/defence/hp/magic_attack/magic_defence), seviye gereksinimi, sınıf gereksinimi (knight/mage/archer), kalite/rarity, satış fiyatı, set ID (varsa).
+
+**3. Quest Verileri**
+```bash
+# Görev tanımlarını bul
+find webroot_web/ -name "*quest*" -o -name "*Quest*" -o -name "*mission*"
+```
+Her quest ID için: isim, açıklama, tip (main/side/daily/class), ön koşul quest ID, hedefler (kill monster X adet, collect item Y, talk to NPC Z, complete dungeon), ödüller (exp, gold, items), NPC diyalog zincirleri, seviye gereksinimi.
+
+**4. Monster Verileri**
+```bash
+find webroot_web/ -name "*monster*" -o -name "*Monster*" -o -name "*mob*"
+```
+Her monster ID için: isim, seviye, HP, ATK, DEF, MATK, MDEF, element, drop tablosu (item ID + drop oranı), XP ödülü, gold ödülü, boss flag, spawn bölgesi.
+
+**5. Campaign/Dungeon Stage Verileri**
+```bash
+find webroot_web/ -name "*campaign*" -o -name "*Campaign*" -o -name "*stage*" -o -name "*dungeon*"
+```
+Her stage için: bölüm, sıra, canavar listesi (ID + adet), boss ID, ödüller, yıldız koşulları, Elite/Nightmare varyantları.
+
+**6. Skill Verileri**
+```bash
+find webroot_web/ -name "*skill*" -o -name "*Skill*"
+```
+Her skill ID için: isim, sınıf (knight/mage/archer), seviye, hasar çarpanı, rage maliyeti, cooldown, AOE flag, efekt tipi (stun/dot/shield/heal), açılma seviyesi.
+
+**7. Shop Verileri**
+```bash
+find webroot_web/ -name "*shop*" -o -name "*Shop*" -o -name "*store*"
+```
+Mağaza sekmeleri, her sekmedeki item ID listesi, fiyatlar (gold/balens/bound_balens), stok limitleri, VIP gereksinimleri.
+
+**8. Map/Zone Verileri**
+```bash
+find webroot_web/ -name "*map*" -o -name "*Map*" -o -name "*scene*"
+```
+Zone ID, isim, seviye aralığı, canavar spawn noktaları, NPC konumları, portal/geçiş noktaları.
+
+**9. Opcode Eşleştirme**
+```bash
+# Client'ın opcode tanımlarını bul
+grep -r "0x0F\|0x10\|CMD_\|OPCODE\|cmdId\|PacketId" webroot_web/src/ --include="*.js"
+```
+Client'ın kullandığı gerçek opcode'ları sunucunun opcodes.js dosyasıyla karşılaştır.
+
+### Tamamlanması Gereken Kod Düzeltmeleri
+
+- [ ] **Protobuf tanımları**: Client .proto dosyalarından çıkarılıp `proto.js`/`proto-game.js`'e eklenmeli (216 sendJson → encode dönüşümü)
+- [ ] **Item template sistemi**: Client item verilerinden `server/data/items.json` oluşturulmalı, inventory.js bu tabloyu kullanmalı
+- [ ] **Quest içeriği**: Client quest verilerinden 200+ görev quest.js'e aktarılmalı
+- [ ] **Campaign stages**: Client campaign verilerinden 80+ stage campaign.js'e aktarılmalı
+- [ ] **Monster templates**: Client monster verilerinden 500+ canavar battle.js'e aktarılmalı
+- [ ] **Shop kataloğu**: Client shop verilerinden 100+ item shop.js'e aktarılmalı
+- [ ] **Map zones**: Client harita verilerinden 15+ zone world-map.js'e aktarılmalı
+- [ ] **Skill verileri**: Client skill verilerinden sınıf becerileri skills.js'e aktarılmalı (şu an battle.js ile skills.js ayrı CLASS_SKILLS kullanıyor)
+- [ ] **Seviye bazlı stat büyümesi**: Her level up'da base stat artışı (sınıfa göre farklı)
+- [ ] **Equipment set bonusları**: Set parçaları birlikte bonus vermeli
+- [ ] **Karakter oluşturma**: `giveStarterItems()` handlers.js'de çağrılmalı, job parametresi eklenmeli
+- [ ] **Battle ↔ Skills entegrasyonu**: skills.js'te öğrenilen beceriler battle.js'te kullanılmalı
+- [ ] **Quest progress tetikleyicileri**: Kill/equip/recruit/guild/arena gibi aksiyonlar quest ilerletmeli
+- [ ] **Feature unlock gating**: Her sistem featureUnlock.isFeatureUnlocked() kontrol etmeli
+- [ ] **Achievement tetikleyicileri**: Oyun aksiyonları achievement.js'i tetiklemeli
+- [ ] **Ranking otomatik güncelleme**: Güç/arena/level değişimlerinde sıralama güncellemeli
+- [ ] **VIP bonus entegrasyonu**: EXP/gold kazanımları VIP çarpanı uygullamalı
+- [ ] **Gacha item ödülleri**: Item tipi ödüller envantere eklenmeli
+- [ ] **Drop sistemi**: Monster drop tablosundan gerçek item ID vermeli
+- [ ] **Şifre hashleme**: Düz metin yerine bcrypt/argon2 kullanılmalı
 
 ## Dosya Yapısı
 
