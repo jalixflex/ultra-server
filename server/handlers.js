@@ -537,6 +537,35 @@ HANDLERS[C.BATTLE_START] = (ws, body) => {
   } catch (e) { sendSimpleResult(ws, false, 'Battle error'); }
 };
 
+HANDLERS[C.BATTLE_SKILL] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = battle.selectSkill(req.battleId, cid, req.skillSlot);
+    sendJson(ws, S.BATTLE_SKILL_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.BATTLE_AUTO] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    battle.setAuto(req.battleId, cid, !!req.enabled);
+  } catch (e) {}
+};
+
+HANDLERS[C.SYLPH_TRANSFORM] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = battle.sylphTransform(req.battleId, cid);
+    sendJson(ws, S.SYLPH_TRANSFORM_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
 HANDLERS[C.CAMPAIGN_LIST] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
@@ -844,6 +873,26 @@ HANDLERS[C.SYLPH_EVOLVE] = (ws, body) => {
     const req = JSON.parse(body.toString());
     const result = sylph.evolveSylph(cid, req.sylphId);
     sendJson(ws, S.SYLPH_EVOLVE_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.SYLPH_TRANSFORM] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = battle.sylphTransform(req.battleId, cid);
+    sendJson(ws, S.SYLPH_TRANSFORM_RSP, result);
+  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+};
+
+HANDLERS[C.SYLPH_REVERT] = (ws, body) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  try {
+    const req = JSON.parse(body.toString());
+    const result = battle.sylphRevert(req.battleId, cid);
+    sendJson(ws, S.SYLPH_REVERT_RSP, result);
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 

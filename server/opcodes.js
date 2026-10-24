@@ -29,6 +29,8 @@ const C = {
 
   // Battle / Campaign
   BATTLE_START:        0x4268,
+  BATTLE_SKILL:        0x1B5C,
+  BATTLE_AUTO:         0x1B5A,
   CAMPAIGN_LIST:       0x4269,
   CAMPAIGN_ENTER:      0x426A,
   CAMPAIGN_SWEEP:      0x426B,
@@ -82,6 +84,8 @@ const C = {
   SYLPH_STAR:          0x3E85,
   SYLPH_AWAKEN:        0x3E86,
   SYLPH_EVOLVE:        0x3E87,
+  SYLPH_TRANSFORM:     0x3E90,
+  SYLPH_REVERT:        0x3E91,
 
   // Mount
   MOUNT_LIST:          0x4268 + 0x2000,
@@ -400,6 +404,7 @@ const S = {
   BATTLE_INIT:           0x4270,
   BATTLE_ROUND:          0x4271,
   BATTLE_END:            0x4272,
+  BATTLE_SKILL_RSP:      0x1024,
   CAMPAIGN_LIST_RSP:     0x4273,
   CAMPAIGN_RESULT:       0x4274,
   CAMPAIGN_BLITZ_RSP:    0x4275,
@@ -433,6 +438,8 @@ const S = {
   SYLPH_STAR_RSP:        0x10A5,
   SYLPH_AWAKEN_RSP:      0x10A6,
   SYLPH_EVOLVE_RSP:      0x10A7,
+  SYLPH_TRANSFORM_RSP:   0x10B0,
+  SYLPH_REVERT_RSP:      0x10B1,
 
   // Mount
   MOUNT_LIST_RSP:        0x6270,
