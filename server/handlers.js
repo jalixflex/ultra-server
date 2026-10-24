@@ -69,6 +69,7 @@ const purgatoryMaze = require('./systems/purgatory-maze');
 const archaeology = require('./systems/archaeology');
 const crossServer = require('./systems/cross-server');
 const tutorial = require('./systems/tutorial');
+const featureUnlock = require('./systems/feature-unlock');
 
 /**
  * Per-connection state stored on the ws object:
@@ -340,7 +341,7 @@ HANDLERS[C.G_LOGIN_GATEWAY] = (ws, body, pkt, cfg) => {
       attackLeftCount: 10,
       noviceProcess: 0,
       fightingCapacity: char.fighting,
-      gradeProcess: '0/100',
+      gradeProcess: `${char.exp}/${battle.expForLevel(char.grade)}`,
       bagCount: char.bag_count,
       matchWin: 0,
       matchFailed: 0,
@@ -362,6 +363,33 @@ HANDLERS[C.G_LOGIN_GATEWAY] = (ws, body, pkt, cfg) => {
       magicDefence: char.magic_defence,
     });
     sendPacket(ws, S.U_C_PLAYER_INFO, playerBody, char.id);
+
+    // Send bag contents
+    try { inventory.handleBagInfo(ws); } catch (e) { console.error('[LOGIN] bag error:', e.message); }
+
+    // Send equipped skills
+    try { sendJson(ws, S.SKILL_LIST, skills.getSkills(charId)); } catch (e) { console.error('[LOGIN] skills error:', e.message); }
+
+    // Send city buildings
+    try { sendJson(ws, S.CITY_INFO, city.getCityInfo(charId)); } catch (e) { console.error('[LOGIN] city error:', e.message); }
+
+    // Send active quests
+    try { sendJson(ws, S.QUEST_LIST, quest.getActiveQuests(charId)); } catch (e) { console.error('[LOGIN] quest error:', e.message); }
+
+    // Send feature unlock flags
+    try { sendJson(ws, 0x8810, featureUnlock.getUnlockedFeatures(char.grade)); } catch (e) { console.error('[LOGIN] featureUnlock error:', e.message); }
+
+    // Send mail count
+    try { sendJson(ws, S.MAIL_LIST, { unread: mail.getUnreadCount(charId) }); } catch (e) { console.error('[LOGIN] mail error:', e.message); }
+
+    // Tutorial state for new players
+    try {
+      const tut = tutorial.getTutorialInfo(charId);
+      if (tut && !tut.completed) {
+        sendJson(ws, S.TUTORIAL_INFO, tut);
+        if (char.grade <= 1) tutorial.onFirstLogin(charId);
+      }
+    } catch (e) { console.error('[LOGIN] tutorial error:', e.message); }
 
     // Trigger daily login reward tracking
     try { dailyLogin.onLogin(charId); } catch (e) { console.error('[LOGIN] dailyLogin error:', e.message); }
@@ -391,7 +419,7 @@ HANDLERS[C.L_SYNC_TIME] = (ws) => {
 function sendSimpleResult(ws, success, msg) {
   const body = encode('com.road.yishi.proto.simple.SimpleResultMsg', {
     result: success ? 0 : -1,
-    msg: msg || '',
+    message: msg || '',
   });
   sendPacket(ws, S.SIMPLE_RESULT, body);
 }
@@ -415,7 +443,7 @@ HANDLERS[C.CHAT_SEND] = (ws, body) => {
     const msg = { sender: char.nick_name, senderId: cid, channel: req.channel || 'world', content: req.content, time: Date.now() };
 
     if (req.channel === 'world' || !req.channel) {
-      chat.broadcast(msg);
+      chat.broadcastChat(msg);
       const clients = global.__clients;
       if (clients) {
         for (const [, ws2] of clients) {
@@ -474,7 +502,7 @@ HANDLERS[C.BATTLE_START] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    const result = battle.startPvE(cid, req.monsterId || 1);
+    const result = battle.startBattle(cid, req.monsterId || 1);
     sendJson(ws, S.BATTLE_INIT, result);
   } catch (e) { sendSimpleResult(ws, false, 'Battle error'); }
 };
@@ -510,7 +538,7 @@ HANDLERS[C.CAMPAIGN_SWEEP] = (ws, body) => {
 HANDLERS[C.GUILD_INFO] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  const info = guild.getGuildForPlayer(cid);
+  const info = guild.getPlayerGuild(cid);
   sendJson(ws, S.GUILD_INFO_RSP, info || { msg: 'No guild' });
 };
 
@@ -542,7 +570,7 @@ HANDLERS[C.GUILD_LEAVE] = (ws) => {
 };
 
 HANDLERS[C.GUILD_LIST] = (ws) => {
-  const list = guild.listGuilds();
+  const list = guild.getGuildList();
   sendJson(ws, S.GUILD_LIST_RSP, { guilds: list });
 };
 
@@ -551,7 +579,7 @@ HANDLERS[C.GUILD_DONATE] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    const result = guild.donate(cid, req.amount || 100);
+    const result = guild.donateToGuild(cid, req.amount || 100);
     sendSimpleResult(ws, result.success, result.msg);
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
@@ -579,7 +607,7 @@ HANDLERS[C.MAIL_COLLECT] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    const result = mail.collectAttachments(cid, req.mailId);
+    const result = mail.claimAttachments(cid, req.mailId);
     sendSimpleResult(ws, result.success, result.msg);
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
@@ -598,7 +626,7 @@ HANDLERS[C.MAIL_DELETE] = (ws, body) => {
 HANDLERS[C.FRIEND_LIST] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  const friends = friend.getFriends(cid);
+  const friends = friend.getFriendList(cid);
   sendJson(ws, S.FRIEND_LIST_RSP, { friends });
 };
 
@@ -634,7 +662,7 @@ HANDLERS[C.FRIEND_SEARCH] = (ws, body) => {
 
 // ─── Shop ───────────────────────────────────
 HANDLERS[C.SHOP_LIST] = (ws) => {
-  const catalog = shop.getCatalog();
+  const catalog = shop.getShopList();
   sendJson(ws, S.SHOP_LIST_RSP, { items: catalog });
 };
 
@@ -667,7 +695,7 @@ HANDLERS[C.ASTRAL_LIST] = (ws) => {
 HANDLERS[C.ASTRAL_CAPTURE] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  const result = astral.capture(cid);
+  const result = astral.captureAstral(cid);
   sendJson(ws, S.ASTRAL_UPDATE, result);
 };
 
@@ -676,7 +704,7 @@ HANDLERS[C.ASTRAL_UPGRADE] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    const result = astral.upgrade(cid, req.astralId, req.feedIds || []);
+    const result = astral.upgradeAstral(cid, req.astralId, req.feedIds || []);
     sendJson(ws, S.ASTRAL_UPDATE, result);
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
@@ -686,7 +714,7 @@ HANDLERS[C.ASTRAL_EQUIP] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    const result = astral.equip(cid, req.astralId, req.slot);
+    const result = astral.equipAstral(cid, req.astralId, req.slot);
     sendJson(ws, S.ASTRAL_UPDATE, result);
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
@@ -696,7 +724,7 @@ HANDLERS[C.ASTRAL_UNEQUIP] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    const result = astral.unequip(cid, req.slot);
+    const result = astral.sellAstral(cid, req.slot);
     sendJson(ws, S.ASTRAL_UPDATE, result);
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
@@ -734,7 +762,7 @@ HANDLERS[C.SYLPH_ENGULF] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    const result = sylph.engulf(cid, req.sylphId, req.feedId);
+    const result = sylph.engulfSylph(cid, req.sylphId, req.feedId);
     sendJson(ws, S.SYLPH_UPDATE, result);
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
@@ -2185,7 +2213,7 @@ HANDLERS[C.TUTORIAL_STEP] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    sendJson(ws, S.TUTORIAL_STEP_RSP, tutorial.advanceStep(cid, req.stepId));
+    sendJson(ws, S.TUTORIAL_STEP_RSP, tutorial.onAction(cid, req.stepId));
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 

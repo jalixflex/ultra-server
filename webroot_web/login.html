@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wartune Ultra — Giriş Yap</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,sans-serif;min-height:100vh;
+  background:linear-gradient(135deg,#1a0a3e 0%,#2d1b69 30%,#1a2a6c 60%,#0d1b3e 100%);
+  display:flex;align-items:center;justify-content:center}
+
+.bg-art{position:fixed;inset:0;z-index:0;overflow:hidden}
+.bg-art::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 30% 50%,rgba(180,120,255,0.08) 0%,transparent 60%),
+  radial-gradient(ellipse at 70% 60%,rgba(100,160,255,0.06) 0%,transparent 50%)}
+.glow{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.15}
+.glow-1{width:400px;height:400px;background:#a855f7;top:10%;left:5%}
+.glow-2{width:300px;height:300px;background:#3b82f6;bottom:10%;right:10%}
+.glow-3{width:250px;height:250px;background:#f59e0b;top:60%;left:50%}
+
+.login-container{position:relative;z-index:10;width:420px;max-width:92vw}
+
+.back-btn{display:inline-flex;align-items:center;gap:6px;color:#a78bfa;text-decoration:none;font-size:14px;margin-bottom:16px;
+  transition:color .2s;background:none;border:none;cursor:pointer}
+.back-btn:hover{color:#fff}
+.back-btn::before{content:'‹';font-size:22px;font-weight:300;line-height:1}
+
+.login-card{background:rgba(255,255,255,0.97);border-radius:20px;padding:40px 36px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.3),0 0 80px rgba(140,80,255,0.1)}
+
+.login-header{display:flex;align-items:center;gap:12px;margin-bottom:32px}
+.login-icon{width:36px;height:36px;background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:900}
+.login-title{font-size:22px;font-weight:700;color:#1e293b}
+
+.form-group{margin-bottom:16px}
+.form-group input{width:100%;padding:14px 16px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:15px;
+  color:#334155;background:#f8fafc;transition:border-color .2s,box-shadow .2s;outline:none}
+.form-group input::placeholder{color:#94a3b8}
+.form-group input:focus{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,0.1);background:#fff}
+
+.form-links{display:flex;justify-content:space-between;margin:20px 0 24px}
+.form-links a{color:#7c3aed;font-size:14px;font-weight:500;text-decoration:none;transition:color .2s}
+.form-links a:hover{color:#6d28d9;text-decoration:underline}
+
+.btn-login{width:100%;padding:14px;border:none;border-radius:10px;font-size:16px;font-weight:700;color:#fff;cursor:pointer;
+  background:linear-gradient(135deg,#dc2626,#ef4444);transition:transform .15s,box-shadow .15s;letter-spacing:0.5px}
+.btn-login:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(220,38,38,0.35)}
+.btn-login:active{transform:translateY(0)}
+.btn-login:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+
+.error-msg{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;padding:10px 14px;border-radius:8px;font-size:13px;
+  margin-bottom:16px;display:none}
+.success-msg{background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a;padding:10px 14px;border-radius:8px;font-size:13px;
+  margin-bottom:16px;display:none}
+
+.register-card{background:rgba(255,255,255,0.97);border-radius:20px;padding:40px 36px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.3);display:none}
+.register-card .login-header .login-icon{background:linear-gradient(135deg,#16a34a,#22c55e)}
+
+.tab-switch{text-align:center;margin-top:16px;color:#64748b;font-size:13px}
+.tab-switch a{color:#7c3aed;font-weight:600;text-decoration:none}
+.tab-switch a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<div class="bg-art">
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+  <div class="glow glow-3"></div>
+</div>
+
+<div class="login-container">
+  <a href="/" class="back-btn">Geri Dön</a>
+
+  <!-- Login Form -->
+  <div class="login-card" id="loginCard">
+    <div class="login-header">
+      <div class="login-icon">W</div>
+      <h1 class="login-title">Giriş Yap</h1>
+    </div>
+    <div class="error-msg" id="loginError"></div>
+    <div class="success-msg" id="loginSuccess"></div>
+    <form id="loginForm" onsubmit="return doLogin(event)">
+      <div class="form-group">
+        <input type="text" id="loginUser" placeholder="E-posta adresinizi girin" required autocomplete="username">
+      </div>
+      <div class="form-group">
+        <input type="password" id="loginPass" placeholder="Şifre" required autocomplete="current-password">
+      </div>
+      <div class="form-links">
+        <a href="#" onclick="showRegister()">Kayıt Ol</a>
+        <a href="#">Şifre geri alımı</a>
+      </div>
+      <button type="submit" class="btn-login" id="loginBtn">Giriş Yap</button>
+    </form>
+    <div class="tab-switch">Hesabın yok mu? <a href="#" onclick="showRegister()">Kayıt Ol</a></div>
+  </div>
+
+  <!-- Register Form -->
+  <div class="register-card" id="registerCard">
+    <div class="login-header">
+      <div class="login-icon">+</div>
+      <h1 class="login-title">Kayıt Ol</h1>
+    </div>
+    <div class="error-msg" id="regError"></div>
+    <div class="success-msg" id="regSuccess"></div>
+    <form id="regForm" onsubmit="return doRegister(event)">
+      <div class="form-group">
+        <input type="text" id="regUser" placeholder="Kullanıcı adı (en az 3 karakter)" required minlength="3">
+      </div>
+      <div class="form-group">
+        <input type="password" id="regPass" placeholder="Şifre (en az 4 karakter)" required minlength="4">
+      </div>
+      <div class="form-group">
+        <input type="password" id="regPass2" placeholder="Şifre tekrar" required minlength="4">
+      </div>
+      <button type="submit" class="btn-login" style="background:linear-gradient(135deg,#16a34a,#22c55e)" id="regBtn">Kayıt Ol</button>
+    </form>
+    <div class="tab-switch">Zaten hesabın var mı? <a href="#" onclick="showLogin()">Giriş Yap</a></div>
+  </div>
+</div>
+
+<script>
+function showRegister(){
+  document.getElementById('loginCard').style.display='none';
+  document.getElementById('registerCard').style.display='block';
+}
+function showLogin(){
+  document.getElementById('registerCard').style.display='none';
+  document.getElementById('loginCard').style.display='block';
+}
+
+async function doLogin(e){
+  e.preventDefault();
+  const errEl=document.getElementById('loginError');
+  const sucEl=document.getElementById('loginSuccess');
+  const btn=document.getElementById('loginBtn');
+  errEl.style.display='none';sucEl.style.display='none';
+  btn.disabled=true;btn.textContent='Giriş yapılıyor...';
+
+  try{
+    const res=await fetch('/api/login',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:document.getElementById('loginUser').value,password:document.getElementById('loginPass').value})
+    });
+    const data=await res.json();
+    if(data.ok){
+      sucEl.textContent='Giriş başarılı! Oyuna yönlendiriliyorsunuz...';
+      sucEl.style.display='block';
+      localStorage.setItem('wt_key',data.key);
+      localStorage.setItem('wt_site',data.site);
+      localStorage.setItem('wt_user',document.getElementById('loginUser').value);
+      setTimeout(()=>{
+        window.location.href='/game.html?key='+data.key+'&site='+data.site;
+      },1000);
+    }else{
+      errEl.textContent=data.error||'Giriş başarısız';
+      errEl.style.display='block';
+    }
+  }catch(err){
+    errEl.textContent='Sunucuya bağlanılamadı';errEl.style.display='block';
+  }
+  btn.disabled=false;btn.textContent='Giriş Yap';
+}
+
+async function doRegister(e){
+  e.preventDefault();
+  const errEl=document.getElementById('regError');
+  const sucEl=document.getElementById('regSuccess');
+  const btn=document.getElementById('regBtn');
+  errEl.style.display='none';sucEl.style.display='none';
+
+  const pass=document.getElementById('regPass').value;
+  const pass2=document.getElementById('regPass2').value;
+  if(pass!==pass2){errEl.textContent='Şifreler eşleşmiyor';errEl.style.display='block';return false}
+
+  btn.disabled=true;btn.textContent='Kayıt yapılıyor...';
+  try{
+    const res=await fetch('/api/register',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:document.getElementById('regUser').value,password:pass})
+    });
+    const data=await res.json();
+    if(data.ok){
+      sucEl.textContent='Kayıt başarılı! Şimdi giriş yapabilirsiniz.';
+      sucEl.style.display='block';
+      setTimeout(()=>showLogin(),1500);
+    }else{
+      errEl.textContent=data.error||'Kayıt başarısız';
+      errEl.style.display='block';
+    }
+  }catch(err){
+    errEl.textContent='Sunucuya bağlanılamadı';errEl.style.display='block';
+  }
+  btn.disabled=false;btn.textContent='Kayıt Ol';
+}
+</script>
+</body>
+</html>
