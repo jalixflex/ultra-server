@@ -2041,25 +2041,25 @@ HANDLERS[C.CLOUD_INFO] = (ws) => {
   sendJson(ws, S.CLOUD_INFO_RSP, cloudAdventure.getCloudInfo(cid));
 };
 
-HANDLERS[C.CLOUD_ENTER] = (ws, body) => {
+HANDLERS[C.CLOUD_ENTER] = (ws) => {
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.CLOUD_ENTER_RSP, cloudAdventure.rollDice(cid));
+};
+
+HANDLERS[C.CLOUD_COMPLETE] = (ws, body) => {
   const cid = charId(ws);
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    sendJson(ws, S.CLOUD_ENTER_RSP, cloudAdventure.enterFloor(cid, req.floor));
+    sendJson(ws, S.CLOUD_COMPLETE_RSP, cloudAdventure.collectMilestone(cid, req.milestoneId || 0));
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
-};
-
-HANDLERS[C.CLOUD_COMPLETE] = (ws) => {
-  const cid = charId(ws);
-  if (!cid) return;
-  sendJson(ws, S.CLOUD_COMPLETE_RSP, cloudAdventure.completeFloor(cid));
 };
 
 HANDLERS[C.CLOUD_REWARDS] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  sendJson(ws, S.CLOUD_REWARDS_RSP, cloudAdventure.getFloorRewards(cid));
+  sendJson(ws, S.CLOUD_REWARDS_RSP, cloudAdventure.getCloudInfo(cid));
 };
 
 // ─── Purgatory Maze ────────────────────────
@@ -2080,33 +2080,33 @@ HANDLERS[C.MAZE_MOVE] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    sendJson(ws, S.MAZE_MOVE_RSP, purgatoryMaze.moveRoom(cid, req.roomId));
+    sendJson(ws, S.MAZE_MOVE_RSP, purgatoryMaze.moveMaze(cid, req.direction || req.roomId));
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
 HANDLERS[C.MAZE_FIGHT] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  sendJson(ws, S.MAZE_FIGHT_RSP, purgatoryMaze.fightRoom(cid));
+  sendJson(ws, S.MAZE_FIGHT_RSP, purgatoryMaze.getMazeInfo(cid));
 };
 
 HANDLERS[C.MAZE_BOSS] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  sendJson(ws, S.MAZE_BOSS_RSP, purgatoryMaze.getLayerBoss(cid));
+  sendJson(ws, S.MAZE_BOSS_RSP, purgatoryMaze.getMazeInfo(cid));
 };
 
 HANDLERS[C.MAZE_COMPLETE] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  sendJson(ws, S.MAZE_COMPLETE_RSP, purgatoryMaze.completeMaze(cid));
+  sendJson(ws, S.MAZE_COMPLETE_RSP, purgatoryMaze.exitMaze(cid));
 };
 
 // ─── Archaeology ───────────────────────────
 HANDLERS[C.ARCHAEOLOGY_INFO] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  sendJson(ws, S.ARCHAEOLOGY_INFO_RSP, archaeology.getArchaeologyInfo(cid));
+  sendJson(ws, S.ARCHAEOLOGY_INFO_RSP, archaeology.getArchInfo(cid));
 };
 
 HANDLERS[C.ARCHAEOLOGY_DIG] = (ws) => {
@@ -2118,7 +2118,7 @@ HANDLERS[C.ARCHAEOLOGY_DIG] = (ws) => {
 HANDLERS[C.ARCHAEOLOGY_COLLECTION] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  sendJson(ws, S.ARCHAEOLOGY_COLLECTION_RSP, archaeology.getCollection(cid));
+  sendJson(ws, S.ARCHAEOLOGY_COLLECTION_RSP, archaeology.getArchInfo(cid));
 };
 
 HANDLERS[C.ARCHAEOLOGY_CLAIM_SET] = (ws, body) => {
@@ -2126,7 +2126,7 @@ HANDLERS[C.ARCHAEOLOGY_CLAIM_SET] = (ws, body) => {
   if (!cid) return;
   try {
     const req = JSON.parse(body.toString());
-    sendJson(ws, S.ARCHAEOLOGY_CLAIM_SET_RSP, archaeology.claimSetReward(cid, req.setId));
+    sendJson(ws, S.ARCHAEOLOGY_CLAIM_SET_RSP, archaeology.collectSet(cid, req.setId));
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
@@ -2134,44 +2134,43 @@ HANDLERS[C.ARCHAEOLOGY_CLAIM_SET] = (ws, body) => {
 HANDLERS[C.CS_ARENA_INFO] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  sendJson(ws, S.CS_ARENA_INFO_RSP, crossServer.getCsArenaInfo(cid));
+  sendJson(ws, S.CS_ARENA_INFO_RSP, crossServer.getCrossArenaInfo(cid));
 };
 
 HANDLERS[C.CS_ARENA_MATCH] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  sendJson(ws, S.CS_ARENA_MATCH_RSP, crossServer.startCsArenaMatch(cid));
+  sendJson(ws, S.CS_ARENA_MATCH_RSP, crossServer.crossArenaFight(cid));
 };
 
-HANDLERS[C.CS_ARENA_COMPLETE] = (ws, body) => {
+HANDLERS[C.CS_ARENA_COMPLETE] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  try {
-    const req = JSON.parse(body.toString());
-    sendJson(ws, S.CS_ARENA_COMPLETE_RSP, crossServer.completeCsArenaMatch(cid, req.won));
-  } catch (e) { sendSimpleResult(ws, false, 'Error'); }
+  sendJson(ws, S.CS_ARENA_COMPLETE_RSP, crossServer.getCrossArenaInfo(cid));
 };
 
 HANDLERS[C.CS_ARENA_RANKING] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  sendJson(ws, S.CS_ARENA_RANKING_RSP, crossServer.getCsArenaRanking());
+  sendJson(ws, S.CS_ARENA_RANKING_RSP, crossServer.getCrossArenaInfo(cid));
 };
 
 HANDLERS[C.CS_GW_INFO] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  sendJson(ws, S.CS_GW_INFO_RSP, crossServer.getCsGuildWarInfo(cid));
+  sendJson(ws, S.CS_GW_INFO_RSP, crossServer.getCrossGWInfo(cid));
 };
 
 HANDLERS[C.CS_GW_RANKING] = (ws) => {
-  sendJson(ws, S.CS_GW_RANKING_RSP, crossServer.getCsGuildWarRanking());
+  const cid = charId(ws);
+  if (!cid) return;
+  sendJson(ws, S.CS_GW_RANKING_RSP, crossServer.getCrossGWInfo(cid));
 };
 
 HANDLERS[C.CS_SEASON_REWARDS] = (ws) => {
   const cid = charId(ws);
   if (!cid) return;
-  sendJson(ws, S.CS_SEASON_REWARDS_RSP, crossServer.getSeasonRewards(cid));
+  sendJson(ws, S.CS_SEASON_REWARDS_RSP, crossServer.getSeasonInfo(cid));
 };
 
 // ─── Tutorial ──────────────────────────────
