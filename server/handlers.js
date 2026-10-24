@@ -719,6 +719,7 @@ HANDLERS[C.ASTRAL_CAPTURE] = (ws) => {
   if (!cid) return;
   const result = astral.captureAstral(cid);
   sendJson(ws, S.ASTRAL_UPDATE, result);
+  if (result.success) { try { quest.updateProgress(cid, 'capture_astral', 'any'); } catch(e) {} }
 };
 
 HANDLERS[C.ASTRAL_UPGRADE] = (ws, body) => {
@@ -832,6 +833,7 @@ HANDLERS[C.TROOP_RECRUIT] = (ws, body) => {
     const req = JSON.parse(body.toString());
     const result = troops.recruitTroop(cid, req.typeId, req.count || 50);
     sendJson(ws, S.TROOP_UPDATE, result);
+    if (result.success) { try { quest.updateProgress(cid, 'recruit_troop', 'any'); } catch(e) {} }
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
@@ -951,6 +953,7 @@ HANDLERS[C.SKILL_UPGRADE] = (ws, body) => {
     const req = JSON.parse(body.toString());
     const result = skills.learnOrUpgrade(cid, req.skillId);
     sendJson(ws, S.SKILL_UPDATE, result);
+    if (result.success) { try { quest.updateProgress(cid, 'learn_skill', 'any'); } catch(e) {} }
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
@@ -987,6 +990,7 @@ HANDLERS[C.FORGE_ENCHANT] = (ws, body) => {
     const req = JSON.parse(body.toString());
     const result = forge.enchantItem(cid, req.itemDbId);
     sendJson(ws, S.FORGE_RESULT, result);
+    if (result.success) { try { quest.updateProgress(cid, 'enchant_item', 'any'); } catch(e) {} }
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
@@ -997,6 +1001,7 @@ HANDLERS[C.FORGE_SOCKET] = (ws, body) => {
     const req = JSON.parse(body.toString());
     const result = forge.socketGem(cid, req.itemDbId, req.gemType, req.gemLevel);
     sendJson(ws, S.FORGE_RESULT, result);
+    if (result.success) { try { quest.updateProgress(cid, 'socket_gem', 'any'); } catch(e) {} }
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
@@ -1075,6 +1080,7 @@ HANDLERS[C.CITY_UPGRADE] = (ws, body) => {
     const req = JSON.parse(body.toString());
     const result = city.upgradeBuilding(cid, req.buildingId);
     sendJson(ws, S.CITY_UPGRADE_RSP, result);
+    if (result.success) { try { quest.updateProgress(cid, 'upgrade_building', req.buildingId || 'any'); } catch(e) {} }
   } catch (e) { sendSimpleResult(ws, false, 'Error'); }
 };
 
