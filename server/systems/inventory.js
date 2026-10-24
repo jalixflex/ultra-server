@@ -241,8 +241,8 @@ function recalcStats(charId) {
 
   // Title bonus stats
   try {
-    const titles = require('./titles');
-    const titleStats = titles.getActiveTitleStats(charId);
+    const title = require('./title');
+    const titleStats = title.getEquippedTitleStats(charId);
     totalAtk  += titleStats.attack || 0;
     totalDef  += titleStats.defence || 0;
     totalHp   += titleStats.hp || 0;
