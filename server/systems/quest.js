@@ -503,6 +503,7 @@ function checkLevelUp(charId) {
       .run(newLevel, expNeeded, charId);
     require('./inventory').recalcStats(charId);
     try { require('./ranking').updatePlayerRanking(charId); } catch (e) {}
+    try { require('./titles').checkNewTitles(charId); } catch (e) {}
     checkLevelUp(charId);
   }
 }

@@ -49,12 +49,18 @@ function initDB() {
       PRIMARY KEY(char_id, achievement_id)
     );
     CREATE TABLE IF NOT EXISTS achievement_stats (
-      char_id        INTEGER PRIMARY KEY REFERENCES characters(id),
-      arena_wins     INTEGER DEFAULT 0,
-      wb_damage      INTEGER DEFAULT 0,
-      bg_wins        INTEGER DEFAULT 0,
-      devotion_total INTEGER DEFAULT 0,
-      gold_total     INTEGER DEFAULT 0
+      char_id          INTEGER PRIMARY KEY REFERENCES characters(id),
+      arena_wins       INTEGER DEFAULT 0,
+      wb_damage        INTEGER DEFAULT 0,
+      bg_wins          INTEGER DEFAULT 0,
+      devotion_total   INTEGER DEFAULT 0,
+      gold_total       INTEGER DEFAULT 0,
+      battles_won      INTEGER DEFAULT 0,
+      monsters_killed  INTEGER DEFAULT 0,
+      bosses_killed    INTEGER DEFAULT 0,
+      quests_completed INTEGER DEFAULT 0,
+      campaigns_cleared INTEGER DEFAULT 0,
+      guild_join       INTEGER DEFAULT 0
     );
   `);
 }
@@ -182,15 +188,24 @@ function claimAchievement(charId, achievementId) {
   return { success: true, achievementId, name: ach.name, reward: r };
 }
 
+const VALID_STATS = ['arena_wins', 'wb_damage', 'bg_wins', 'devotion_total', 'gold_total',
+  'battles_won', 'monsters_killed', 'bosses_killed', 'quests_completed', 'campaigns_cleared', 'guild_join'];
+
 function incrementStat(charId, statName, amount) {
   db.getDatabase().prepare('INSERT OR IGNORE INTO achievement_stats (char_id) VALUES (?)').run(charId);
-  const col = ['arena_wins', 'wb_damage', 'bg_wins', 'devotion_total', 'gold_total'].includes(statName) ? statName : null;
-  if (!col) return;
-  db.getDatabase().prepare(`UPDATE achievement_stats SET ${col} = ${col} + ? WHERE char_id = ?`).run(amount, charId);
+  if (!VALID_STATS.includes(statName)) return;
+  db.getDatabase().prepare(`UPDATE achievement_stats SET ${statName} = ${statName} + ? WHERE char_id = ?`).run(amount, charId);
+}
+
+function getStat(charId, statName) {
+  db.getDatabase().prepare('INSERT OR IGNORE INTO achievement_stats (char_id) VALUES (?)').run(charId);
+  if (!VALID_STATS.includes(statName)) return 0;
+  const row = db.getDatabase().prepare('SELECT * FROM achievement_stats WHERE char_id = ?').get(charId);
+  return row ? (row[statName] || 0) : 0;
 }
 
 module.exports = {
   OPCODES, ACHIEVEMENTS,
   initDB,
-  getAchievementList, claimAchievement, incrementStat,
+  getAchievementList, claimAchievement, incrementStat, getStat,
 };

@@ -73,6 +73,8 @@ const purgatoryMaze = require('./systems/purgatory-maze');
 const archaeology = require('./systems/archaeology');
 const crossServer = require('./systems/cross-server');
 const tutorial = require('./systems/tutorial');
+const giftCode = require('./systems/gift-code');
+const title = require('./systems/title');
 
 // ─── Configuration ───────────────────────
 const PORT = parseInt(process.env.PORT, 10) || 8899;
@@ -143,7 +145,9 @@ purgatoryMaze.initDB();
 archaeology.initDB();
 crossServer.initDB();
 tutorial.initDB();
-console.log('[DB] Database ready (58 systems).');
+giftCode.initDB();
+title.initDB();
+console.log('[DB] Database ready (60 systems).');
 
 // ─── Create HTTP Server ──────────────────
 const httpHandler = createHttpHandler(config);
@@ -151,6 +155,7 @@ const server = http.createServer(httpHandler);
 
 // ─── Create WebSocket Server ─────────────
 const wss = new WebSocketServer({ server, path: '/ws' });
+global.__wss = wss;
 
 // Track all connected clients (shared with handlers and systems)
 const clients = new Map(); // charId → ws

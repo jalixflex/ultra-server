@@ -358,6 +358,13 @@ const C = {
   TUTORIAL_COMPLETE:   0x8902,
   NPC_DIALOG_NEXT:     0x8903,
   TUTORIAL_SKIP:       0x8904,
+
+  // Titles
+  TITLE_LIST:          0x9910,
+  EQUIP_TITLE:         0x9912,
+
+  // City Build
+  CITY_SPEED_UP:       0x6103,
 };
 
 // ═══════════════════════════════════════════
@@ -664,6 +671,13 @@ const S = {
   CS_GW_INFO_RSP:        0x8814,
   CS_GW_RANKING_RSP:     0x8815,
   CS_SEASON_REWARDS_RSP: 0x8816,
+
+  // Titles
+  TITLE_LIST_RSP:        0x9911,
+  EQUIP_TITLE_RSP:       0x9913,
+
+  // City Build
+  CITY_SPEED_UP_RSP:     0x6113,
 
   // Tutorial
   TUTORIAL_INFO_RSP:     0x8910,

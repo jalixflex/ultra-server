@@ -239,6 +239,17 @@ function recalcStats(charId) {
     totalMDef += (attrs.magicDefence || 0) + item.enhance * 2;
   }
 
+  // Title bonus stats
+  try {
+    const titles = require('./titles');
+    const titleStats = titles.getActiveTitleStats(charId);
+    totalAtk  += titleStats.attack || 0;
+    totalDef  += titleStats.defence || 0;
+    totalHp   += titleStats.hp || 0;
+    totalMAtk += titleStats.magicAttack || 0;
+    totalMDef += titleStats.magicDefence || 0;
+  } catch(e) {}
+
   const fighting = totalAtk + totalDef + totalHp / 10 + totalMAtk + totalMDef;
 
   db.updateCharacter(charId, {
