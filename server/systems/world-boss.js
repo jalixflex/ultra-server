@@ -12,12 +12,26 @@ const OPCODES = {
 };
 
 const BOSSES = [
-  { id: 1, name: 'Bloodfang',     baseHp: 5000000,  atk: 500,  def: 200, minLevel: 20,
-    schedule: '11:35-12:35', goldReward: 50000, daruReward: 10000, expReward: 20000 },
-  { id: 2, name: 'Redoga Drake',  baseHp: 10000000, atk: 800,  def: 350, minLevel: 30,
-    schedule: '22:00-23:00', goldReward: 80000, daruReward: 15000, expReward: 35000 },
-  { id: 3, name: 'Void Titan',    baseHp: 25000000, atk: 1200, def: 500, minLevel: 50,
-    schedule: '20:00-21:00', goldReward: 120000, daruReward: 25000, expReward: 60000 },
+  { id: 1,  name: 'Bloodfang',           baseHp: 5000000,   atk: 500,   def: 200,  minLevel: 20,
+    schedule: '11:35-12:35', goldReward: 50000,  daruReward: 10000, expReward: 20000 },
+  { id: 2,  name: 'Redoga Drake',        baseHp: 10000000,  atk: 800,   def: 350,  minLevel: 30,
+    schedule: '22:00-23:00', goldReward: 80000,  daruReward: 15000, expReward: 35000 },
+  { id: 3,  name: 'Karanlık Lord',       baseHp: 18000000,  atk: 1000,  def: 450,  minLevel: 35,
+    schedule: '12:00-13:00', goldReward: 100000, daruReward: 20000, expReward: 50000 },
+  { id: 4,  name: 'Buz Kraliçesi',       baseHp: 30000000,  atk: 1300,  def: 550,  minLevel: 40,
+    schedule: '19:00-20:00', goldReward: 130000, daruReward: 28000, expReward: 65000 },
+  { id: 5,  name: 'Void Titan',          baseHp: 50000000,  atk: 1600,  def: 700,  minLevel: 50,
+    schedule: '20:00-21:00', goldReward: 160000, daruReward: 35000, expReward: 80000 },
+  { id: 6,  name: 'Cehennem Ateşi',      baseHp: 75000000,  atk: 2000,  def: 900,  minLevel: 55,
+    schedule: '14:00-15:00', goldReward: 200000, daruReward: 45000, expReward: 100000 },
+  { id: 7,  name: 'Fırtına Devasa',      baseHp: 100000000, atk: 2500,  def: 1100, minLevel: 60,
+    schedule: '21:00-22:00', goldReward: 250000, daruReward: 55000, expReward: 130000 },
+  { id: 8,  name: 'Gölge İmparatoru',    baseHp: 150000000, atk: 3200,  def: 1400, minLevel: 65,
+    schedule: '12:30-13:30', goldReward: 300000, daruReward: 70000, expReward: 160000 },
+  { id: 9,  name: 'Kaos Ejderhası',      baseHp: 200000000, atk: 4000,  def: 1800, minLevel: 70,
+    schedule: '20:30-21:30', goldReward: 400000, daruReward: 90000, expReward: 200000 },
+  { id: 10, name: 'Uçurum Lordu Azgoth', baseHp: 300000000, atk: 5000,  def: 2200, minLevel: 80,
+    schedule: '22:00-23:00', goldReward: 500000, daruReward: 120000, expReward: 300000 },
 ];
 
 function initDB() {
